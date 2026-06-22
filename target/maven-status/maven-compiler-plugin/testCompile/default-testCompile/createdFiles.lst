@@ -1,5 +1,0 @@
-com/learning/qr/web/QrCodeControllerTest.class
-com/learning/qr/service/QrCodeServiceTest.class
-com/learning/totp/repository/TotpSeedRepositoryTest.class
-com/learning/totp/web/TotpControllerTest.class
-com/learning/totp/service/TotpServiceTest.class
