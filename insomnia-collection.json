@@ -1,0 +1,91 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-06-22T00:00:00.000Z",
+  "__export_source": "learning-utility.manual",
+  "resources": [
+    {
+      "_id": "wrk_learning_utility",
+      "_type": "workspace",
+      "parentId": null,
+      "name": "learning-utility",
+      "description": "QR code scanning (ZXing) + TOTP generation/verification (dev.samstevens.totp) demo APIs"
+    },
+    {
+      "_id": "env_base",
+      "_type": "environment",
+      "parentId": "wrk_learning_utility",
+      "name": "Base Environment",
+      "data": {
+        "baseUrl": "http://localhost:8095"
+      }
+    },
+    {
+      "_id": "fld_qr",
+      "_type": "request_group",
+      "parentId": "wrk_learning_utility",
+      "name": "QR Code (com.learning.qr)"
+    },
+    {
+      "_id": "req_qr_scan",
+      "_type": "request",
+      "parentId": "fld_qr",
+      "name": "Scan QR Code",
+      "method": "POST",
+      "url": "{{ _.baseUrl }}/qr/scan",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "name": "file",
+            "type": "file",
+            "fileName": ""
+          }
+        ]
+      },
+      "headers": []
+    },
+    {
+      "_id": "fld_totp",
+      "_type": "request_group",
+      "parentId": "wrk_learning_utility",
+      "name": "TOTP (com.learning.totp)"
+    },
+    {
+      "_id": "req_totp_generate",
+      "_type": "request",
+      "parentId": "fld_totp",
+      "name": "Generate TOTP Seed",
+      "method": "POST",
+      "url": "{{ _.baseUrl }}/totp/generate",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"accountName\": \"alice@example.com\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    },
+    {
+      "_id": "req_totp_verify",
+      "_type": "request",
+      "parentId": "fld_totp",
+      "name": "Verify TOTP Code",
+      "method": "POST",
+      "url": "{{ _.baseUrl }}/totp/verify",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"accountName\": \"alice@example.com\",\n  \"code\": \"123456\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    }
+  ]
+}
