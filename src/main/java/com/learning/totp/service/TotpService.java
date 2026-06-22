@@ -1,7 +1,9 @@
 package com.learning.totp.service;
 
 import com.learning.totp.domain.TotpSeed;
+import com.learning.totp.exception.CodeGenerationFailedException;
 import com.learning.totp.exception.TotpAccountNotFoundException;
+import com.learning.totp.exception.TotpQrGenerationException;
 import com.learning.totp.repository.TotpSeedRepository;
 import com.learning.totp.web.dto.TotpGenerateResponse;
 import com.learning.totp.web.dto.TotpVerifyResponse;
@@ -11,7 +13,10 @@ import dev.samstevens.totp.code.DefaultCodeGenerator;
 import dev.samstevens.totp.code.DefaultCodeVerifier;
 import dev.samstevens.totp.code.HashingAlgorithm;
 import dev.samstevens.totp.exceptions.CodeGenerationException;
+import dev.samstevens.totp.exceptions.QrGenerationException;
 import dev.samstevens.totp.qr.QrData;
+import dev.samstevens.totp.qr.QrGenerator;
+import dev.samstevens.totp.qr.ZxingPngQrGenerator;
 import dev.samstevens.totp.secret.DefaultSecretGenerator;
 import dev.samstevens.totp.secret.SecretGenerator;
 import dev.samstevens.totp.time.SystemTimeProvider;
@@ -36,6 +41,7 @@ public class TotpService {
   private final TimeProvider timeProvider = new SystemTimeProvider();
   private final CodeGenerator codeGenerator = new DefaultCodeGenerator(HashingAlgorithm.SHA1, DIGITS);
   private final CodeVerifier codeVerifier = buildCodeVerifier();
+  private final QrGenerator qrGenerator = new ZxingPngQrGenerator();
 
   public TotpService(TotpSeedRepository seedRepository) {
     this.seedRepository = seedRepository;
@@ -54,23 +60,41 @@ public class TotpService {
     log.info("TOTP | seed generated and saved | accountName={}", accountName);
 
     String currentCode = currentCode(secret);
-    String otpAuthUri = buildOtpAuthUri(accountName, secret);
+    QrData qrData = buildQrData(accountName, secret);
 
     return new TotpGenerateResponse()
         .accountName(accountName)
         .secret(secret)
         .currentCode(currentCode)
-        .otpAuthUri(otpAuthUri);
+        .otpAuthUri(qrData.getUri());
   }
 
   public TotpVerifyResponse verify(String accountName, String code) {
+    TotpSeed seed = findSeedOrThrow(accountName);
+    boolean valid = codeVerifier.isValidCode(seed.secret(), code);
+    log.info("TOTP | verify | accountName={} | valid={}", accountName, valid);
+    return new TotpVerifyResponse().valid(valid);
+  }
+
+  /** Renders the saved seed's enrollment URI as a scannable QR code PNG. */
+  public TotpQrCodeImage generateQrCodeImage(String accountName) {
+    TotpSeed seed = findSeedOrThrow(accountName);
+    QrData qrData = buildQrData(accountName, seed.secret());
+    try {
+      byte[] image = qrGenerator.generate(qrData);
+      log.info("TOTP | QR enrollment image rendered | accountName={}", accountName);
+      return new TotpQrCodeImage(image, qrGenerator.getImageMimeType());
+    } catch (QrGenerationException e) {
+      throw new TotpQrGenerationException("Failed to render the enrollment QR code", e);
+    }
+  }
+
+  private TotpSeed findSeedOrThrow(String accountName) {
     TotpSeed seed = seedRepository.findByAccountName(accountName);
     if (seed == null) {
       throw new TotpAccountNotFoundException(accountName);
     }
-    boolean valid = codeVerifier.isValidCode(seed.secret(), code);
-    log.info("TOTP | verify | accountName={} | valid={}", accountName, valid);
-    return new TotpVerifyResponse().valid(valid);
+    return seed;
   }
 
   private String currentCode(String secret) {
@@ -78,20 +102,18 @@ public class TotpService {
       long counter = timeProvider.getTime() / PERIOD_SECONDS;
       return codeGenerator.generate(secret, counter);
     } catch (CodeGenerationException e) {
-      throw new IllegalStateException("Failed to generate the current TOTP code", e);
+      throw new CodeGenerationFailedException("Failed to generate the current TOTP code", e);
     }
   }
 
-  private String buildOtpAuthUri(String accountName, String secret) {
-    QrData data =
-        new QrData.Builder()
-            .label(accountName)
-            .secret(secret)
-            .issuer(ISSUER)
-            .algorithm(HashingAlgorithm.SHA1)
-            .digits(DIGITS)
-            .period(PERIOD_SECONDS)
-            .build();
-    return data.getUri();
+  private QrData buildQrData(String accountName, String secret) {
+    return new QrData.Builder()
+        .label(accountName)
+        .secret(secret)
+        .issuer(ISSUER)
+        .algorithm(HashingAlgorithm.SHA1)
+        .digits(DIGITS)
+        .period(PERIOD_SECONDS)
+        .build();
   }
 }

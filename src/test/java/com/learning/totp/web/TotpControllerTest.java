@@ -2,13 +2,16 @@ package com.learning.totp.web;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.learning.common.web.GlobalExceptionHandler;
 import com.learning.totp.exception.TotpAccountNotFoundException;
+import com.learning.totp.service.TotpQrCodeImage;
 import com.learning.totp.service.TotpService;
 import com.learning.totp.web.dto.TotpGenerateResponse;
 import com.learning.totp.web.dto.TotpVerifyResponse;
@@ -97,5 +100,28 @@ class TotpControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"accountName\":\"ghost@example.com\",\"code\":\"123456\"}"))
         .andExpect(status().isNotFound());
+  }
+
+  @Test
+  @DisplayName("GET /totp/{accountName}/qrcode returns 200 with an image/png body")
+  void qrCodeReturnsPngImage() throws Exception {
+    byte[] fakePng = {(byte) 0x89, 'P', 'N', 'G'};
+    when(totpService.generateQrCodeImage("alice@example.com"))
+        .thenReturn(new TotpQrCodeImage(fakePng, "image/png"));
+
+    mockMvc
+        .perform(get("/totp/alice@example.com/qrcode"))
+        .andExpect(status().isOk())
+        .andExpect(content().contentType(MediaType.IMAGE_PNG))
+        .andExpect(content().bytes(fakePng));
+  }
+
+  @Test
+  @DisplayName("GET /totp/{accountName}/qrcode for an unknown account returns 404")
+  void qrCodeUnknownAccountReturns404() throws Exception {
+    when(totpService.generateQrCodeImage("ghost@example.com"))
+        .thenThrow(new TotpAccountNotFoundException("ghost@example.com"));
+
+    mockMvc.perform(get("/totp/ghost@example.com/qrcode")).andExpect(status().isNotFound());
   }
 }

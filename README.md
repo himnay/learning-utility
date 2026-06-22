@@ -15,16 +15,16 @@ hand-written and reference the generated classes directly.
 
 ## Tech Stack
 
-| Concern         | Technology                                                  |
-|------------------|--------------------------------------------------------------|
-| Language         | Java 25                                                       |
-| Framework        | Spring Boot 4.1.0, Spring MVC                                 |
-| QR decoding      | ZXing (`com.google.zxing:core` + `javase`)                    |
-| TOTP             | `dev.samstevens.totp:totp`                                    |
-| Persistence      | Spring JDBC (`JdbcTemplate`) + PostgreSQL + Flyway             |
-| API docs         | springdoc-openapi (Swagger UI)                                |
-| Model generation | `openapi-generator-maven-plugin` (generator: `spring`, models only) |
-| Build            | Maven — parent `com.org.llm:super-pom`, deps from `com.org.learning:learning-bom` (no version is hardcoded in this module's `pom.xml`) |
+| Concern           | Technology                                                                                                                             |
+|-------------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| Language          | Java 25                                                                                                                                |
+| Framework         | Spring Boot 4.1.0, Spring MVC                                                                                                          |
+| QR decoding       | ZXing (`com.google.zxing:core` + `javase`)                                                                                             |
+| TOTP              | `dev.samstevens.totp:totp`                                                                                                             |
+| Persistence       | Spring JDBC (`JdbcTemplate`) + PostgreSQL + Flyway                                                                                     |
+| API docs          | springdoc-openapi (Swagger UI)                                                                                                         |
+| Model generation  | `openapi-generator-maven-plugin` (generator: `spring`, models only)                                                                    |
+| Build             | Maven — parent `com.org.llm:super-pom`, deps from `com.org.learning:learning-bom` (no version is hardcoded in this module's `pom.xml`) |
 
 ---
 
@@ -104,7 +104,18 @@ curl -s -X POST http://localhost:8095/totp/verify \
 
 `404` if no seed has been generated yet for that account.
 
-An Insomnia collection covering all three requests is at `insomnia-collection.json` (import it
+### `GET /totp/{accountName}/qrcode` — render the enrollment URI as a scannable QR code
+
+```bash
+curl -s http://localhost:8095/totp/alice@example.com/qrcode -o qr.png
+```
+
+Returns an `image/png` body — open `qr.png` and scan it with Google Authenticator/Authy to enroll
+without typing the secret by hand. Built with `dev.samstevens.totp`'s `ZxingPngQrGenerator`
+(backed by the same ZXing library `com.learning.qr` uses to decode). `404` if no seed exists yet
+for the account.
+
+An Insomnia collection covering all four requests is at `insomnia-collection.json` (import it
 directly — no auth/environment setup needed beyond the `baseUrl` variable, defaulted to
 `http://localhost:8095`).
 
@@ -139,8 +150,8 @@ Swagger UI: `http://localhost:8095/swagger-ui.html`
 
 ## Configuration
 
-| Property                  | Env var          | Default                              |
-|----------------------------|-------------------|----------------------------------------|
-| `server.port`              | `SERVER_PORT`      | `8095`                                  |
-| `spring.datasource.url`    | `POSTGRES_HOST`/`POSTGRES_PORT`/`POSTGRES_DB` | `jdbc:postgresql://localhost:5433/learning_utility` |
-| multipart max file size    | —                  | `10MB`                                  |
+| Property                    | Env var                                       | Default                                    |
+|-----------------------------|-----------------------------------------------|--------------------------------------------|
+| `server.port`               | `SERVER_PORT`                                 | `8095`                                     |
+| `spring.datasource.url`     | `POSTGRES_HOST`/`POSTGRES_PORT`/`POSTGRES_DB` | `jdbc:postgresql://localhost:5433/utility` |
+| multipart max file size     | —                                             | `10MB`                                     |

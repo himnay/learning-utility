@@ -68,4 +68,28 @@ class TotpServiceTest {
     assertThatThrownBy(() -> service.verify("unknown@example.com", "123456"))
         .isInstanceOf(TotpAccountNotFoundException.class);
   }
+
+  @Test
+  @DisplayName("generateQrCodeImage() renders a non-empty PNG for an account with a saved seed")
+  void generateQrCodeImageRendersPng() {
+    when(repository.findByAccountName("dave@example.com"))
+        .thenReturn(new TotpSeed(1L, "dave@example.com", "JBSWY3DPEHPK3PXP", Instant.now()));
+
+    TotpQrCodeImage image = service.generateQrCodeImage("dave@example.com");
+
+    assertThat(image.mimeType()).isEqualTo("image/png");
+    assertThat(image.bytes()).isNotEmpty();
+    // PNG magic number
+    assertThat(image.bytes()[0]).isEqualTo((byte) 0x89);
+    assertThat(image.bytes()[1]).isEqualTo((byte) 'P');
+  }
+
+  @Test
+  @DisplayName("generateQrCodeImage() throws TotpAccountNotFoundException when no seed is saved")
+  void generateQrCodeImageThrowsWhenAccountUnknown() {
+    when(repository.findByAccountName("unknown@example.com")).thenReturn(null);
+
+    assertThatThrownBy(() -> service.generateQrCodeImage("unknown@example.com"))
+        .isInstanceOf(TotpAccountNotFoundException.class);
+  }
 }

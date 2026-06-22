@@ -86,6 +86,15 @@
           "value": "application/json"
         }
       ]
+    },
+    {
+      "_id": "req_totp_qrcode",
+      "_type": "request",
+      "parentId": "fld_totp",
+      "name": "Get Enrollment QR Code",
+      "method": "GET",
+      "url": "{{ _.baseUrl }}/totp/alice@example.com/qrcode",
+      "headers": []
     }
   ]
 }

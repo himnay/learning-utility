@@ -1,5 +1,6 @@
 package com.learning.totp.web;
 
+import com.learning.totp.service.TotpQrCodeImage;
 import com.learning.totp.service.TotpService;
 import com.learning.totp.web.dto.TotpGenerateRequest;
 import com.learning.totp.web.dto.TotpGenerateResponse;
@@ -9,6 +10,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -41,5 +46,17 @@ public class TotpController {
       description = "Looks up the account's persisted seed and checks whether the supplied code is valid right now.")
   public TotpVerifyResponse verify(@Valid @RequestBody TotpVerifyRequest request) {
     return totpService.verify(request.getAccountName(), request.getCode());
+  }
+
+  @GetMapping("/{accountName}/qrcode")
+  @Operation(
+      operationId = "getTotpEnrollmentQrCode",
+      summary = "Render the saved seed's enrollment URI as a scannable QR code",
+      description =
+          "Returns a PNG of the otpauth:// URI for this account's saved seed — scan it with Google "
+              + "Authenticator, Authy, etc. to enroll without typing the secret by hand.")
+  public ResponseEntity<byte[]> qrCode(@PathVariable String accountName) {
+    TotpQrCodeImage image = totpService.generateQrCodeImage(accountName);
+    return ResponseEntity.ok().contentType(MediaType.parseMediaType(image.mimeType())).body(image.bytes());
   }
 }

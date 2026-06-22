@@ -3,6 +3,7 @@ package com.learning.common.web;
 import com.learning.common.web.dto.ApiError;
 import com.learning.qr.exception.QrDecodeException;
 import com.learning.totp.exception.TotpAccountNotFoundException;
+import com.learning.totp.exception.TotpQrGenerationException;
 import java.time.OffsetDateTime;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -34,6 +35,13 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(TotpAccountNotFoundException.class)
   public ResponseEntity<ApiError> handleTotpAccountNotFound(TotpAccountNotFoundException ex) {
     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error(HttpStatus.NOT_FOUND, ex.getMessage()));
+  }
+
+  @ExceptionHandler(TotpQrGenerationException.class)
+  public ResponseEntity<ApiError> handleTotpQrGeneration(TotpQrGenerationException ex) {
+    log.error("LEARNING_UTILITY | QR generation failed | {}", ex.getMessage(), ex);
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .body(error(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage()));
   }
 
   @ExceptionHandler(Exception.class)
