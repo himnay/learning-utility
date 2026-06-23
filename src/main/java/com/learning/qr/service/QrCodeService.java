@@ -7,11 +7,17 @@ import com.google.zxing.LuminanceSource;
 import com.google.zxing.MultiFormatReader;
 import com.google.zxing.NotFoundException;
 import com.google.zxing.Result;
+import com.google.zxing.WriterException;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
+import com.google.zxing.common.BitMatrix;
 import com.google.zxing.common.HybridBinarizer;
+import com.google.zxing.qrcode.QRCodeWriter;
 import com.learning.qr.exception.QrDecodeException;
+import com.learning.qr.exception.QrEncodeException;
 import com.learning.qr.web.dto.QrDecodeResponse;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.EnumMap;
@@ -21,10 +27,13 @@ import javax.imageio.ImageIO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-/** Decodes a QR code out of an uploaded image using ZXing. */
+/** Decodes and generates QR codes using ZXing. */
 @Slf4j
 @Service
 public class QrCodeService {
+
+  private static final String IMAGE_FORMAT = "PNG";
+  private static final String IMAGE_MIME_TYPE = "image/png";
 
   private static final Map<DecodeHintType, Object> HINTS = new EnumMap<>(DecodeHintType.class);
 
@@ -43,6 +52,18 @@ public class QrCodeService {
       return new QrDecodeResponse().text(result.getText()).format(result.getBarcodeFormat().name());
     } catch (NotFoundException e) {
       throw new QrDecodeException("No QR code could be found in the uploaded image");
+    }
+  }
+
+  public QrCodeImage generate(String text, int size) {
+    try {
+      BitMatrix matrix = new QRCodeWriter().encode(text, BarcodeFormat.QR_CODE, size, size);
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      MatrixToImageWriter.writeToStream(matrix, IMAGE_FORMAT, out);
+      log.info("QR_ENCODE | generated | size={}", size);
+      return new QrCodeImage(out.toByteArray(), IMAGE_MIME_TYPE);
+    } catch (WriterException | IOException e) {
+      throw new QrEncodeException("Failed to generate the QR code: " + e.getMessage(), e);
     }
   }
 

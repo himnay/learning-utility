@@ -2,6 +2,7 @@ package com.learning.common.web;
 
 import com.learning.common.web.dto.ApiError;
 import com.learning.qr.exception.QrDecodeException;
+import com.learning.qr.exception.QrEncodeException;
 import com.learning.totp.exception.TotpAccountNotFoundException;
 import com.learning.totp.exception.TotpQrGenerationException;
 import java.time.OffsetDateTime;
@@ -29,6 +30,11 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(QrDecodeException.class)
   public ResponseEntity<ApiError> handleQrDecode(QrDecodeException ex) {
+    return ResponseEntity.badRequest().body(error(HttpStatus.BAD_REQUEST, ex.getMessage()));
+  }
+
+  @ExceptionHandler(QrEncodeException.class)
+  public ResponseEntity<ApiError> handleQrEncode(QrEncodeException ex) {
     return ResponseEntity.badRequest().body(error(HttpStatus.BAD_REQUEST, ex.getMessage()));
   }
 

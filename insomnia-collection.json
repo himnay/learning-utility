@@ -27,6 +27,25 @@
       "name": "QR Code (com.learning.qr)"
     },
     {
+      "_id": "req_qr_generate",
+      "_type": "request",
+      "parentId": "fld_qr",
+      "name": "Generate QR Code",
+      "method": "GET",
+      "url": "{{ _.baseUrl }}/qr/generate",
+      "parameters": [
+        {
+          "name": "text",
+          "value": "https://example.com/learning-utility"
+        },
+        {
+          "name": "size",
+          "value": "250"
+        }
+      ],
+      "headers": []
+    },
+    {
       "_id": "req_qr_scan",
       "_type": "request",
       "parentId": "fld_qr",
