@@ -17,6 +17,15 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
+apns:
+  # Token-based APNs auth (.p8 signing key) — doesn't expire like a .p12 certificate.
+  enabled: ${APNS_ENABLED:false}
+  signing-key-path: ${APNS_SIGNING_KEY_PATH:}
+  team-id: ${APNS_TEAM_ID:}
+  key-id: ${APNS_KEY_ID:}
+  topic: ${APNS_TOPIC:}
+  production: ${APNS_PRODUCTION:false}
+
 springdoc:
   api-docs:
     path: /api-docs

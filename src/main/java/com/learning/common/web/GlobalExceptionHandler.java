@@ -1,6 +1,8 @@
 package com.learning.common.web;
 
 import com.learning.common.web.dto.ApiError;
+import com.learning.notification.exception.NotificationConfigurationException;
+import com.learning.notification.exception.NotificationDeliveryException;
 import com.learning.qr.exception.QrDecodeException;
 import com.learning.qr.exception.QrEncodeException;
 import com.learning.totp.exception.TotpAccountNotFoundException;
@@ -48,6 +50,18 @@ public class GlobalExceptionHandler {
     log.error("LEARNING_UTILITY | QR generation failed | {}", ex.getMessage(), ex);
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
         .body(error(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage()));
+  }
+
+  @ExceptionHandler(NotificationConfigurationException.class)
+  public ResponseEntity<ApiError> handleNotificationConfiguration(NotificationConfigurationException ex) {
+    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+        .body(error(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage()));
+  }
+
+  @ExceptionHandler(NotificationDeliveryException.class)
+  public ResponseEntity<ApiError> handleNotificationDelivery(NotificationDeliveryException ex) {
+    log.error("LEARNING_UTILITY | APNs delivery failed | {}", ex.getMessage(), ex);
+    return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(error(HttpStatus.BAD_GATEWAY, ex.getMessage()));
   }
 
   @ExceptionHandler(Exception.class)

@@ -73,6 +73,13 @@
             <artifactId>totp</artifactId>
         </dependency>
 
+        <!-- ===== Apple Push Notifications (com.learning.notification) ===== -->
+        <dependency>
+            <groupId>com.eatthepath</groupId>
+            <artifactId>pushy</artifactId>
+            <version>0.15.6</version>
+        </dependency>
+
         <!-- ===== OpenAPI / Swagger UI ===== -->
         <dependency>
             <groupId>org.springdoc</groupId>
@@ -216,6 +223,23 @@
                             <inputSpec>${project.basedir}/src/main/resources/openapi/totp-api.yaml</inputSpec>
                             <generatorName>spring</generatorName>
                             <modelPackage>com.learning.totp.web.dto</modelPackage>
+                            <generateApis>false</generateApis>
+                            <generateSupportingFiles>false</generateSupportingFiles>
+                            <configOptions>
+                                <useSpringBoot3>true</useSpringBoot3>
+                                <useJakartaEe>true</useJakartaEe>
+                            </configOptions>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>generate-notification-models</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <inputSpec>${project.basedir}/src/main/resources/openapi/notification-api.yaml</inputSpec>
+                            <generatorName>spring</generatorName>
+                            <modelPackage>com.learning.notification.web.dto</modelPackage>
                             <generateApis>false</generateApis>
                             <generateSupportingFiles>false</generateSupportingFiles>
                             <configOptions>
