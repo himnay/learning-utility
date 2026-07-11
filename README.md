@@ -1,5 +1,7 @@
 # learning-utility
 
+<img src="image/spring-logo.png" alt="Spring" width="70"/>
+
 A small Spring Boot application bundling **three independent demo REST APIs** behind one process:
 
 - **`com.learning.qr`** — generic QR code generation and decoding, backed by ZXing.
@@ -285,6 +287,10 @@ CREATE TABLE IF NOT EXISTS totp_seed (
 ---
 
 ## Deep dive: QR codes and how they're used here
+
+An `otpauth://` provisioning QR generated for this app (scan it with any authenticator):
+
+<img src="image/totp-otpauth-qr.png" alt="TOTP provisioning QR code" width="160"/>
 
 A QR ("Quick Response") code is a 2D matrix barcode: a square grid of black/white modules encoding
 binary data, plus fixed structural elements (the three large finder patterns in three corners, the
