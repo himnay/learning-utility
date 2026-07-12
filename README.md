@@ -35,20 +35,20 @@ classes directly.
 
 ## Table of contents
 
-1. [Tech stack](#tech-stack)
-2. [Architecture at a glance](#architecture-at-a-glance)
-3. [Deep dive: how TOTP actually works](#deep-dive-how-totp-actually-works)
-4. [How this repo implements TOTP](#how-this-repo-implements-totp)
-5. [Deep dive: QR codes and how they're used here](#deep-dive-qr-codes-and-how-theyre-used-here)
-6. [The notification module: what it really is](#the-notification-module-what-it-really-is)
-7. [Sequence diagrams](#sequence-diagrams)
-8. [Project structure](#project-structure)
-9. [API reference](#api-reference)
-10. [Data model](#data-model)
-11. [Error handling](#error-handling)
-12. [Running](#running)
-13. [Testing](#testing)
-14. [Configuration reference](#configuration-reference)
+1. 🧰 [Tech stack](#tech-stack)
+2. 🏗️ [Architecture at a glance](#architecture-at-a-glance)
+3. 🚀 [Deep dive: how TOTP actually works](#deep-dive-how-totp-actually-works)
+4. 🔹 [How this repo implements TOTP](#how-this-repo-implements-totp)
+5. 💡 [Deep dive: QR codes and how they're used here](#deep-dive-qr-codes-and-how-theyre-used-here)
+6. 🏗️ [The notification module: what it really is](#the-notification-module-what-it-really-is)
+7. 🔹 [Sequence diagrams](#sequence-diagrams)
+8. 🏗️ [Project structure](#project-structure)
+9. 📚 [API reference](#api-reference)
+10. 🤖 [Data model](#data-model)
+11. ⚠️ [Error handling](#error-handling)
+12. 🚀 [Running](#running)
+13. 🧪 [Testing](#testing)
+14. 📚 [Configuration reference](#configuration-reference)
 
 ---
 
