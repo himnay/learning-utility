@@ -52,7 +52,8 @@ classes directly.
 
 ---
 
-## Tech stack
+<a id="tech-stack"></a>
+## 1. 🧰 Tech stack
 
 | Concern           | Technology                                                                                                                             |
 |-------------------|------------------------------------------------------------------------------------------------------------------------------------------|
@@ -68,7 +69,8 @@ classes directly.
 
 ---
 
-## Architecture at a glance
+<a id="architecture-at-a-glance"></a>
+## 2. 🏗️ Architecture at a glance
 
 The three packages share nothing except the top-level Spring Boot application class and the
 common exception-handling advice. There is no service-to-service call anywhere in the codebase.
@@ -117,7 +119,8 @@ that is intentional and reflects the real code, not a simplification.
 
 ---
 
-## Deep dive: how TOTP actually works
+<a id="deep-dive-how-totp-actually-works"></a>
+## 3. 🚀 Deep dive: how TOTP actually works
 
 TOTP (Time-based One-Time Password, [RFC 6238](https://datatracker.ietf.org/doc/html/rfc6238)) is
 the algorithm behind the 6-digit codes in apps like Google Authenticator, Authy, and 1Password's
@@ -193,7 +196,8 @@ and you extend the practical replay window for an attacker who intercepts a code
 
 ---
 
-## How this repo implements TOTP
+<a id="how-this-repo-implements-totp"></a>
+## 4. 🔹 How this repo implements TOTP
 
 All TOTP logic lives in
 [`TotpService`](src/main/java/com/learning/totp/service/TotpService.java), which wires together
@@ -286,7 +290,8 @@ CREATE TABLE IF NOT EXISTS totp_seed (
 
 ---
 
-## Deep dive: QR codes and how they're used here
+<a id="deep-dive-qr-codes-and-how-theyre-used-here"></a>
+## 5. 💡 Deep dive: QR codes and how they're used here
 
 An `otpauth://` provisioning QR generated for this app (scan it with any authenticator):
 
@@ -354,7 +359,8 @@ HMAC-SHA1 derivation described above.
 
 ---
 
-## The notification module: what it really is
+<a id="the-notification-module-what-it-really-is"></a>
+## 6. 🏗️ The notification module: what it really is
 
 [`NotificationService`](src/main/java/com/learning/notification/service/NotificationService.java)
 sends **Apple Push Notifications (APNs)** using the [Pushy](https://github.com/relayrides/pushy)
@@ -412,7 +418,8 @@ that already exists and is just undocumented.
 
 ---
 
-## Sequence diagrams
+<a id="sequence-diagrams"></a>
+## 7. 🔹 Sequence diagrams
 
 ### Enrollment flow — generate a secret, then scan it into an authenticator app
 
@@ -497,7 +504,8 @@ sequenceDiagram
 
 ---
 
-## Project structure
+<a id="project-structure"></a>
+## 8. 🏗️ Project structure
 
 ```
 src/main/java/com/learning/
@@ -541,7 +549,8 @@ src/main/resources/
 
 ---
 
-## API reference
+<a id="api-reference"></a>
+## 9. 📚 API reference
 
 ### QR module
 
@@ -649,7 +658,8 @@ An Insomnia collection covering all endpoints is at `insomnia-collection.json` (
 
 ---
 
-## Data model
+<a id="data-model"></a>
+## 10. 🤖 Data model
 
 The only persisted state in the whole application is the `totp_seed` table (Flyway migration
 `V1__create_totp_seed.sql`):
@@ -666,7 +676,8 @@ database.
 
 ---
 
-## Error handling
+<a id="error-handling"></a>
+## 11. ⚠️ Error handling
 
 [`GlobalExceptionHandler`](src/main/java/com/learning/common/web/GlobalExceptionHandler.java) maps
 every exception that escapes a controller, across all three packages, to a shared `ApiError` JSON
@@ -685,7 +696,8 @@ shape (`timestamp`, `status`, `error`, `message`):
 
 ---
 
-## Running
+<a id="running"></a>
+## 12. 🚀 Running
 
 ```bash
 docker compose up -d postgres
@@ -701,7 +713,8 @@ fine and simply returns `503` on every call.
 
 ---
 
-## Testing
+<a id="testing"></a>
+## 13. 🧪 Testing
 
 ```bash
 ./mvnw test
@@ -719,7 +732,8 @@ fine and simply returns `503` on every call.
 
 ---
 
-## Configuration reference
+<a id="configuration-reference"></a>
+## 14. 📚 Configuration reference
 
 | Property                    | Env var                                       | Default                                    |
 |-------------------------------|--------------------------------------------|-----------------------------------------------|
