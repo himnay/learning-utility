@@ -4,12 +4,16 @@
 
 A small Spring Boot application bundling **three independent demo REST APIs** behind one process:
 
+<ul>
+
 - **`com.learning.qr`** — generic QR code generation and decoding, backed by ZXing.
 - **`com.learning.totp`** — RFC 6238 time-based one-time password (TOTP) generation and
   verification for two-factor authentication (2FA), backed by `dev.samstevens.totp`, with the
   secret persisted in Postgres.
 - **`com.learning.notification`** — Apple Push Notification service (APNs) delivery, backed by
   the Pushy client library.
+
+</ul>
 
 These three packages are **not wired together**. The README below goes deep on *why* and *how*
 each one works — this is meant to double as a technical explainer of TOTP-based 2FA and QR code
@@ -183,6 +187,8 @@ and you extend the practical replay window for an attacker who intercepts a code
 
 ### Enrollment vs. verification, conceptually
 
+<ul>
+
 - **Enrollment** happens once: the server generates the secret, and the user's phone needs to
   receive an *exact copy* of that secret plus the algorithm parameters (issuer, digits, period,
   hash algorithm). The conventional way to transfer this without asking a human to transcribe a
@@ -193,6 +199,8 @@ and you extend the practical replay window for an attacker who intercepts a code
   recomputes its own copy from *its* stored secret and compares. No secret material ever needs to
   travel over the network again after enrollment — this is what makes TOTP resistant to network
   sniffing in a way that, say, SMS codes are not.
+
+</ul>
 
 ---
 
@@ -278,6 +286,8 @@ CREATE TABLE IF NOT EXISTS totp_seed (
 );
 ```
 
+<ul>
+
 - `account_name` is unique — one seed per account, enforced at the database level, which is what
   makes the upsert-based rotation-on-re-enrollment behavior correct (there's exactly one row to
   conflict against).
@@ -287,6 +297,8 @@ CREATE TABLE IF NOT EXISTS totp_seed (
 - The domain type `TotpSeed` is a plain Java record (`id`, `accountName`, `secret`, `createdAt`) —
   intentionally hand-written rather than OpenAPI-generated, since it never crosses the HTTP
   boundary directly.
+
+</ul>
 
 ---
 
@@ -313,6 +325,8 @@ This repo touches QR codes in two structurally separate places:
 [`QrCodeService`](src/main/java/com/learning/qr/service/QrCodeService.java) has nothing to do with
 TOTP; it's a standalone utility over raw ZXing:
 
+<ul>
+
 - **`decode(InputStream)`** — reads an uploaded image with `ImageIO`, wraps it as a ZXing
   `BufferedImageLuminanceSource` -> `HybridBinarizer` -> `BinaryBitmap`, and runs
   `MultiFormatReader.decode(...)` restricted to `BarcodeFormat.QR_CODE` via a decode hint. Returns
@@ -322,6 +336,8 @@ TOTP; it's a standalone utility over raw ZXing:
   `BitMatrix`, then rasterizes it to a PNG via `MatrixToImageWriter`. `QrCodeController` enforces
   a size window of 100-1000px (`MIN_SIZE`/`MAX_SIZE`) and rejects empty text, both as
   `QrEncodeException` (-> HTTP 400).
+
+</ul>
 
 These two operations are exposed as `GET /qr/generate?text=...&size=...` and
 `POST /qr/scan` (multipart file upload) — a general-purpose "make me a QR code" / "read me a QR
@@ -344,6 +360,8 @@ Authenticator popularized and most authenticator apps now support:
 otpauth://totp/<label>?secret=<secret>&issuer=<issuer>&algorithm=SHA1&digits=6&period=30
 ```
 
+<ul>
+
 - `label` — the account name (e.g. `alice@example.com`), shown in the authenticator app's list.
 - `secret` — the Base32 seed, exactly as persisted in `totp_seed.secret`.
 - `issuer` — hardcoded to `learning-utility` in `TotpService.ISSUER`, shown alongside the account
@@ -351,6 +369,8 @@ otpauth://totp/<label>?secret=<secret>&issuer=<issuer>&algorithm=SHA1&digits=6&p
 - `algorithm`, `digits`, `period` — the same fixed parameters listed earlier, echoed into the URI
   so any compliant authenticator app configures itself identically to the server without the user
   entering anything manually.
+
+</ul>
 
 Scanning this QR code is what lets an authenticator app "enroll" without the user typing a 32-char
 secret by hand — the phone camera reads the URI, the app parses out `secret`/`issuer`/`algorithm`/
@@ -720,6 +740,8 @@ fine and simply returns `503` on every call.
 ./mvnw test
 ```
 
+<ul>
+
 - `QrCodeServiceTest` — generates a real QR PNG in-memory (ZXing encoder) and asserts the service
   decodes it back to the original text; also covers the no-QR-found and not-an-image error paths.
 - `QrCodeControllerTest` / `TotpControllerTest` — `@WebMvcTest` slices with the service mocked.
@@ -729,6 +751,8 @@ fine and simply returns `503` on every call.
 - `TotpSeedRepositoryTest` — Testcontainers Postgres, round-trips `upsert`/`findByAccountName`
   including the on-conflict secret-rotation behavior.
 - `NotificationServiceTest` — exercises the Pushy-based send path.
+
+</ul>
 
 ---
 
