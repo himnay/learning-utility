@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:19beta1  # -alpine variant of 19beta1 is broken (missing postgres user)
     container_name: learning-utility-postgres
     ports:
       - "5433:5432"
@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql   # PG18+: mount the parent dir (versioned subdir layout)
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d utility"]
       interval: 10s
