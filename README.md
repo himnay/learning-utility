@@ -59,17 +59,17 @@ classes directly.
 <a id="tech-stack"></a>
 ## 1. 🧰 Tech stack
 
-| Concern           | Technology                                                                                                                             |
-|-------------------|------------------------------------------------------------------------------------------------------------------------------------------|
-| Language          | Java 25                                                                                                                                |
-| Framework         | Spring Boot 4.1.0, Spring MVC                                                                                                          |
-| QR encode/decode  | ZXing (`com.google.zxing:core` + `javase`)                                                                                             |
-| TOTP              | `dev.samstevens.totp:totp` (itself uses ZXing internally for QR rendering)                                                             |
-| Push notifications| `com.eatthepath:pushy` (APNs HTTP/2 client, token-based `.p8` auth)                                                                    |
-| Persistence       | Spring JDBC (`JdbcTemplate`) + PostgreSQL + Flyway                                                                                     |
-| API docs          | springdoc-openapi (Swagger UI)                                                                                                        |
-| Model generation  | `openapi-generator-maven-plugin` (generator: `spring`, models only)                                                                    |
-| Build             | Maven — parent `com.org.llm:super-pom`; no dependency versions are hardcoded in this module's `pom.xml` except `pushy` (`0.15.6`)      |
+| Concern            | Technology                                                                                                                        |
+|--------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| Language           | Java 25                                                                                                                           |
+| Framework          | Spring Boot 4.1.0, Spring MVC                                                                                                     |
+| QR encode/decode   | ZXing (`com.google.zxing:core` + `javase`)                                                                                        |
+| TOTP               | `dev.samstevens.totp:totp` (itself uses ZXing internally for QR rendering)                                                        |
+| Push notifications | `com.eatthepath:pushy` (APNs HTTP/2 client, token-based `.p8` auth)                                                               |
+| Persistence        | Spring JDBC (`JdbcTemplate`) + PostgreSQL + Flyway                                                                                |
+| API docs           | springdoc-openapi (Swagger UI)                                                                                                    |
+| Model generation   | `openapi-generator-maven-plugin` (generator: `spring`, models only)                                                               |
+| Build              | Maven — parent `com.org.llm:super-pom`; no dependency versions are hardcoded in this module's `pom.xml` except `pushy` (`0.15.6`) |
 
 ---
 
@@ -221,12 +221,12 @@ private final QrGenerator qrGenerator = new ZxingPngQrGenerator();
 
 with fixed parameters:
 
-| Parameter                     | Value                                        |
-|--------------------------------|-----------------------------------------------|
-| `ISSUER`                       | `"learning-utility"`                          |
-| `DIGITS`                       | `6`                                            |
-| `PERIOD_SECONDS`                | `30`                                           |
-| Hashing algorithm               | `HashingAlgorithm.SHA1`                        |
+| Parameter                       | Value                                         |
+|---------------------------------|-----------------------------------------------|
+| `ISSUER`                        | `"learning-utility"`                          |
+| `DIGITS`                        | `6`                                           |
+| `PERIOD_SECONDS`                | `30`                                          |
+| Hashing algorithm               | `HashingAlgorithm.SHA1`                       |
 | Allowed time-period discrepancy | `1` (checks previous/current/next 30s window) |
 
 ### Enrollment — `generate(accountName)`
@@ -684,12 +684,12 @@ An Insomnia collection covering all endpoints is at `insomnia-collection.json` (
 The only persisted state in the whole application is the `totp_seed` table (Flyway migration
 `V1__create_totp_seed.sql`):
 
-| Column         | Type          | Notes                                             |
-|----------------|---------------|----------------------------------------------------|
-| `id`           | `BIGSERIAL`   | primary key                                       |
-| `account_name` | `VARCHAR(100)`| `NOT NULL UNIQUE` — one seed per account          |
-| `secret`       | `VARCHAR(64)` | `NOT NULL` — Base32-encoded TOTP secret            |
-| `created_at`   | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()`, refreshed on rotation    |
+| Column         | Type           | Notes                                           |
+|----------------|----------------|-------------------------------------------------|
+| `id`           | `BIGSERIAL`    | primary key                                     |
+| `account_name` | `VARCHAR(100)` | `NOT NULL UNIQUE` — one seed per account        |
+| `secret`       | `VARCHAR(64)`  | `NOT NULL` — Base32-encoded TOTP secret         |
+| `created_at`   | `TIMESTAMPTZ`  | `NOT NULL DEFAULT NOW()`, refreshed on rotation |
 
 QR and notification endpoints are entirely stateless — nothing they touch is written to the
 database.
@@ -703,16 +703,16 @@ database.
 every exception that escapes a controller, across all three packages, to a shared `ApiError` JSON
 shape (`timestamp`, `status`, `error`, `message`):
 
-| Exception                              | HTTP status         | Module         |
-|-----------------------------------------|---------------------|----------------|
-| `MethodArgumentNotValidException`       | 400 Bad Request     | shared (Bean Validation) |
-| `QrDecodeException`                     | 400 Bad Request     | qr             |
-| `QrEncodeException`                     | 400 Bad Request     | qr             |
-| `TotpAccountNotFoundException`          | 404 Not Found       | totp           |
-| `TotpQrGenerationException`             | 500 Internal Server Error (logged) | totp |
-| `NotificationConfigurationException`    | 503 Service Unavailable | notification |
-| `NotificationDeliveryException`         | 502 Bad Gateway (logged) | notification |
-| anything else                           | 500 Internal Server Error (logged) | shared |
+| Exception                            | HTTP status                        | Module                   |
+|--------------------------------------|------------------------------------|--------------------------|
+| `MethodArgumentNotValidException`    | 400 Bad Request                    | shared (Bean Validation) |
+| `QrDecodeException`                  | 400 Bad Request                    | qr                       |
+| `QrEncodeException`                  | 400 Bad Request                    | qr                       |
+| `TotpAccountNotFoundException`       | 404 Not Found                      | totp                     |
+| `TotpQrGenerationException`          | 500 Internal Server Error (logged) | totp                     |
+| `NotificationConfigurationException` | 503 Service Unavailable            | notification             |
+| `NotificationDeliveryException`      | 502 Bad Gateway (logged)           | notification             |
+| anything else                        | 500 Internal Server Error (logged) | shared                   |
 
 ---
 
@@ -759,14 +759,14 @@ fine and simply returns `503` on every call.
 <a id="configuration-reference"></a>
 ## 14. 📚 Configuration reference
 
-| Property                    | Env var                                       | Default                                    |
-|-------------------------------|--------------------------------------------|-----------------------------------------------|
-| `server.port`                 | `SERVER_PORT`                              | `8095`                                        |
-| `spring.datasource.url`       | `POSTGRES_HOST`/`POSTGRES_PORT`/`POSTGRES_DB` | `jdbc:postgresql://localhost:5433/utility` |
-| multipart max file size       | —                                            | `10MB`                                        |
-| `apns.enabled`                | `APNS_ENABLED`                              | `false`                                       |
-| `apns.signing-key-path`       | `APNS_SIGNING_KEY_PATH`                     | *(empty)*                                     |
-| `apns.team-id`                | `APNS_TEAM_ID`                              | *(empty)*                                     |
-| `apns.key-id`                 | `APNS_KEY_ID`                               | *(empty)*                                     |
-| `apns.topic`                  | `APNS_TOPIC`                                | *(empty)*                                     |
-| `apns.production`             | `APNS_PRODUCTION`                           | `false`                                       |
+| Property                | Env var                                       | Default                                    |
+|-------------------------|-----------------------------------------------|--------------------------------------------|
+| `server.port`           | `SERVER_PORT`                                 | `8095`                                     |
+| `spring.datasource.url` | `POSTGRES_HOST`/`POSTGRES_PORT`/`POSTGRES_DB` | `jdbc:postgresql://localhost:5433/utility` |
+| multipart max file size | —                                             | `10MB`                                     |
+| `apns.enabled`          | `APNS_ENABLED`                                | `false`                                    |
+| `apns.signing-key-path` | `APNS_SIGNING_KEY_PATH`                       | *(empty)*                                  |
+| `apns.team-id`          | `APNS_TEAM_ID`                                | *(empty)*                                  |
+| `apns.key-id`           | `APNS_KEY_ID`                                 | *(empty)*                                  |
+| `apns.topic`            | `APNS_TOPIC`                                  | *(empty)*                                  |
+| `apns.production`       | `APNS_PRODUCTION`                             | `false`                                    |
