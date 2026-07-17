@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
 @SpringBootApplication
 @ConfigurationPropertiesScan
-public class LearningUtilityApplication {
+class LearningUtilityApplication {
   public static void main(String[] args) {
     SpringApplication.run(LearningUtilityApplication.class, args);
   }
