@@ -21,9 +21,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** {@code /totp} — generate and verify time-based one-time codes (RFC 6238). */
 @RestController
+@Tag(name = "TOTP")
 @RequestMapping("/totp")
 @RequiredArgsConstructor
-@Tag(name = "TOTP")
 public class TotpController {
 
   private final TotpService totpService;

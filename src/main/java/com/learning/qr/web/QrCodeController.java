@@ -21,8 +21,8 @@ import org.springframework.web.multipart.MultipartFile;
 /** {@code /qr} — generate a QR code from text, or upload an image to decode the one it contains. */
 @RestController
 @RequestMapping("/qr")
-@RequiredArgsConstructor
 @Tag(name = "QR Code")
+@RequiredArgsConstructor
 public class QrCodeController {
 
   private static final int MIN_SIZE = 100;

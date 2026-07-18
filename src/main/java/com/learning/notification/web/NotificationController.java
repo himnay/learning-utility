@@ -14,9 +14,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** {@code /notifications} — send Apple Push Notifications (APNs) via the Pushy client. */
 @RestController
-@RequestMapping("/notifications")
 @RequiredArgsConstructor
 @Tag(name = "Notifications")
+@RequestMapping("/notifications")
 public class NotificationController {
 
   private final NotificationService notificationService;
