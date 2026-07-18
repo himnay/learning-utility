@@ -54,6 +54,7 @@ public class TotpService {
     return verifier;
   }
 
+  /** Generates. */
   public TotpGenerateResponse generate(String accountName) {
     String secret = secretGenerator.generate();
     seedRepository.upsert(accountName, secret);
@@ -69,6 +70,7 @@ public class TotpService {
         .otpAuthUri(qrData.getUri());
   }
 
+  /** Verifies. */
   public TotpVerifyResponse verify(String accountName, String code) {
     TotpSeed seed = findSeedOrThrow(accountName);
     boolean valid = codeVerifier.isValidCode(seed.secret(), code);

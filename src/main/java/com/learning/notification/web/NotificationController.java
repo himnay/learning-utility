@@ -21,6 +21,7 @@ public class NotificationController {
 
   private final NotificationService notificationService;
 
+  /** Sends. */
   @PostMapping("/send")
   @Operation(
       operationId = "sendApplePushNotification",

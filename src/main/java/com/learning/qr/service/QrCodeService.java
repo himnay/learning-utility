@@ -41,6 +41,7 @@ public class QrCodeService {
     HINTS.put(DecodeHintType.POSSIBLE_FORMATS, List.of(BarcodeFormat.QR_CODE));
   }
 
+  /** Decodes. */
   public QrDecodeResponse decode(InputStream imageStream) {
     BufferedImage image = readImage(imageStream);
     LuminanceSource source = new BufferedImageLuminanceSource(image);
@@ -55,6 +56,7 @@ public class QrCodeService {
     }
   }
 
+  /** Generates. */
   public QrCodeImage generate(String text, int size) {
     try {
       BitMatrix matrix = new QRCodeWriter().encode(text, BarcodeFormat.QR_CODE, size, size);

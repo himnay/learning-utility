@@ -28,6 +28,7 @@ public class NotificationService {
     this.properties = properties;
   }
 
+  /** Sends. */
   public NotificationSendResponse send(String deviceToken, String title, String body, Integer badge) {
     ApnsClient client =
         apnsClient.orElseThrow(

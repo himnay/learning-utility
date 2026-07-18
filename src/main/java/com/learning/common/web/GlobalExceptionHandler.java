@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+  /** Handles validation. */
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex) {
     String message =
@@ -30,21 +31,25 @@ public class GlobalExceptionHandler {
     return ResponseEntity.badRequest().body(error(HttpStatus.BAD_REQUEST, message));
   }
 
+  /** Handles qr decode. */
   @ExceptionHandler(QrDecodeException.class)
   public ResponseEntity<ApiError> handleQrDecode(QrDecodeException ex) {
     return ResponseEntity.badRequest().body(error(HttpStatus.BAD_REQUEST, ex.getMessage()));
   }
 
+  /** Handles qr encode. */
   @ExceptionHandler(QrEncodeException.class)
   public ResponseEntity<ApiError> handleQrEncode(QrEncodeException ex) {
     return ResponseEntity.badRequest().body(error(HttpStatus.BAD_REQUEST, ex.getMessage()));
   }
 
+  /** Handles totp account not found. */
   @ExceptionHandler(TotpAccountNotFoundException.class)
   public ResponseEntity<ApiError> handleTotpAccountNotFound(TotpAccountNotFoundException ex) {
     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error(HttpStatus.NOT_FOUND, ex.getMessage()));
   }
 
+  /** Handles totp qr generation. */
   @ExceptionHandler(TotpQrGenerationException.class)
   public ResponseEntity<ApiError> handleTotpQrGeneration(TotpQrGenerationException ex) {
     log.error("LEARNING_UTILITY | QR generation failed | {}", ex.getMessage(), ex);
@@ -52,18 +57,21 @@ public class GlobalExceptionHandler {
         .body(error(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage()));
   }
 
+  /** Handles notification configuration. */
   @ExceptionHandler(NotificationConfigurationException.class)
   public ResponseEntity<ApiError> handleNotificationConfiguration(NotificationConfigurationException ex) {
     return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
         .body(error(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage()));
   }
 
+  /** Handles notification delivery. */
   @ExceptionHandler(NotificationDeliveryException.class)
   public ResponseEntity<ApiError> handleNotificationDelivery(NotificationDeliveryException ex) {
     log.error("LEARNING_UTILITY | APNs delivery failed | {}", ex.getMessage(), ex);
     return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(error(HttpStatus.BAD_GATEWAY, ex.getMessage()));
   }
 
+  /** Handles generic. */
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ApiError> handleGeneric(Exception ex) {
     log.error("LEARNING_UTILITY | unhandled error | {}", ex.getMessage(), ex);

@@ -28,6 +28,7 @@ public class TotpController {
 
   private final TotpService totpService;
 
+  /** Generates. */
   @PostMapping("/generate")
   @Operation(
       operationId = "generateTotpSeed",
@@ -39,6 +40,7 @@ public class TotpController {
     return totpService.generate(request.getAccountName());
   }
 
+  /** Verifies. */
   @PostMapping("/verify")
   @Operation(
       operationId = "verifyTotpCode",
@@ -48,6 +50,7 @@ public class TotpController {
     return totpService.verify(request.getAccountName(), request.getCode());
   }
 
+  /** Returns the qr code. */
   @GetMapping("/{accountName}/qrcode")
   @Operation(
       operationId = "getTotpEnrollmentQrCode",

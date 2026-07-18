@@ -30,6 +30,7 @@ public class QrCodeController {
 
   private final QrCodeService qrCodeService;
 
+  /** Generates. */
   @GetMapping(value = "/generate", produces = MediaType.IMAGE_PNG_VALUE)
   @Operation(
       operationId = "generateQrCode",
@@ -47,6 +48,7 @@ public class QrCodeController {
     return ResponseEntity.ok().contentType(MediaType.parseMediaType(image.mimeType())).body(image.bytes());
   }
 
+  /** Returns the scan. */
   @PostMapping(value = "/scan", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   @Operation(
       operationId = "scanQrCode",

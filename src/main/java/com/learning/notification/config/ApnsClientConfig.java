@@ -22,6 +22,7 @@ import org.springframework.context.annotation.Configuration;
 @EnableConfigurationProperties(ApnsProperties.class)
 public class ApnsClientConfig {
 
+  /** Defines the apns client bean. */
   @Bean(destroyMethod = "close")
   @ConditionalOnProperty(prefix = "apns", name = "enabled", havingValue = "true")
   public ApnsClient apnsClient(ApnsProperties properties) {
