@@ -16,6 +16,19 @@ spring:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
+  security:
+    user:
+      # Baseline auth gate for /totp/** (see SecurityConfig) — a single shared credential, not
+      # per-account authorization. Override both via env vars for anything beyond local dev.
+      name: ${TOTP_ADMIN_USER:admin}
+      password: ${TOTP_ADMIN_PASSWORD:local-dev-only-change-me}
+
+totp:
+  # AES-256-GCM key (base64, 32 bytes) the secret column is encrypted with. This default is a
+  # fixed local-dev placeholder committed to source — it must be overridden via
+  # TOTP_SECRET_ENCRYPTION_KEY for any shared/non-local environment, otherwise every deployment
+  # trusts the same key and encryption-at-rest buys nothing.
+  secret-encryption-key: ${TOTP_SECRET_ENCRYPTION_KEY:tVaztoUpCpUI5bxM28kEJ0blIoHZ7BHNn9vW4qS3YWw=}
 
 apns:
   # Token-based APNs auth (.p8 signing key) — doesn't expire like a .p12 certificate.

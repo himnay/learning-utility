@@ -7,6 +7,7 @@ import com.learning.qr.exception.QrDecodeException;
 import com.learning.qr.exception.QrEncodeException;
 import com.learning.totp.exception.TotpAccountNotFoundException;
 import com.learning.totp.exception.TotpQrGenerationException;
+import com.learning.totp.exception.TotpRateLimitExceededException;
 import java.time.OffsetDateTime;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -47,6 +48,13 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(TotpAccountNotFoundException.class)
   public ResponseEntity<ApiError> handleTotpAccountNotFound(TotpAccountNotFoundException ex) {
     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error(HttpStatus.NOT_FOUND, ex.getMessage()));
+  }
+
+  /** Handles totp rate limit. */
+  @ExceptionHandler(TotpRateLimitExceededException.class)
+  public ResponseEntity<ApiError> handleTotpRateLimit(TotpRateLimitExceededException ex) {
+    return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+        .body(error(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage()));
   }
 
   /** Handles totp qr generation. */

@@ -2,6 +2,8 @@ package com.learning.totp.web;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.anonymous;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -10,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.learning.common.web.GlobalExceptionHandler;
+import com.learning.config.SecurityConfig;
 import com.learning.totp.exception.TotpAccountNotFoundException;
 import com.learning.totp.service.TotpQrCodeImage;
 import com.learning.totp.service.TotpService;
@@ -19,17 +22,34 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 @WebMvcTest(controllers = {TotpController.class, GlobalExceptionHandler.class})
+@Import(SecurityConfig.class)
 class TotpControllerTest {
+
+  private static final RequestPostProcessor AUTHENTICATED = user("test-user");
 
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   @Autowired private MockMvc mockMvc;
   @MockitoBean private TotpService totpService;
+
+  @Test
+  @DisplayName("POST /totp/generate without credentials returns 401")
+  void generateWithoutAuthReturns401() throws Exception {
+    mockMvc
+        .perform(
+            post("/totp/generate")
+                .with(anonymous())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"accountName\":\"alice@example.com\"}"))
+        .andExpect(status().isUnauthorized());
+  }
 
   @Test
   @DisplayName("POST /totp/generate returns 200 with the seed/code/otpauth URI")
@@ -45,6 +65,7 @@ class TotpControllerTest {
     mockMvc
         .perform(
             post("/totp/generate")
+                .with(AUTHENTICATED)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"accountName\":\"alice@example.com\"}"))
         .andExpect(status().isOk())
@@ -58,6 +79,7 @@ class TotpControllerTest {
     mockMvc
         .perform(
             post("/totp/generate")
+                .with(AUTHENTICATED)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"accountName\":\"\"}"))
         .andExpect(status().isBadRequest());
@@ -71,6 +93,7 @@ class TotpControllerTest {
     mockMvc
         .perform(
             post("/totp/verify")
+                .with(AUTHENTICATED)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"accountName\":\"alice@example.com\",\"code\":\"123456\"}"))
         .andExpect(status().isOk())
@@ -83,6 +106,7 @@ class TotpControllerTest {
     mockMvc
         .perform(
             post("/totp/verify")
+                .with(AUTHENTICATED)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"accountName\":\"alice@example.com\",\"code\":\"12\"}"))
         .andExpect(status().isBadRequest());
@@ -97,6 +121,7 @@ class TotpControllerTest {
     mockMvc
         .perform(
             post("/totp/verify")
+                .with(AUTHENTICATED)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"accountName\":\"ghost@example.com\",\"code\":\"123456\"}"))
         .andExpect(status().isNotFound());
@@ -110,7 +135,7 @@ class TotpControllerTest {
         .thenReturn(new TotpQrCodeImage(fakePng, "image/png"));
 
     mockMvc
-        .perform(get("/totp/alice@example.com/qrcode"))
+        .perform(get("/totp/alice@example.com/qrcode").with(AUTHENTICATED))
         .andExpect(status().isOk())
         .andExpect(content().contentType(MediaType.IMAGE_PNG))
         .andExpect(content().bytes(fakePng));
@@ -122,6 +147,8 @@ class TotpControllerTest {
     when(totpService.generateQrCodeImage("ghost@example.com"))
         .thenThrow(new TotpAccountNotFoundException("ghost@example.com"));
 
-    mockMvc.perform(get("/totp/ghost@example.com/qrcode")).andExpect(status().isNotFound());
+    mockMvc
+        .perform(get("/totp/ghost@example.com/qrcode").with(AUTHENTICATED))
+        .andExpect(status().isNotFound());
   }
 }

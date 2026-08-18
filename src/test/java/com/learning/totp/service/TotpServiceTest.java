@@ -20,7 +20,8 @@ import org.junit.jupiter.api.Test;
 class TotpServiceTest {
 
   private final TotpSeedRepository repository = mock(TotpSeedRepository.class);
-  private final TotpService service = new TotpService(repository);
+  private final TotpVerifyRateLimiter rateLimiter = new TotpVerifyRateLimiter();
+  private final TotpService service = new TotpService(repository, rateLimiter);
 
   @Test
   @DisplayName("generate() saves the new secret and returns a valid current code + otpauth URI")
@@ -91,5 +92,21 @@ class TotpServiceTest {
 
     assertThatThrownBy(() -> service.generateQrCodeImage("unknown@example.com"))
         .isInstanceOf(TotpAccountNotFoundException.class);
+  }
+
+  @Test
+  @DisplayName("rotating the secret invalidates codes generated under the old one")
+  void rotatingSecretInvalidatesOldCode() {
+    TotpGenerateResponse first = service.generate("grace@example.com");
+    when(repository.findByAccountName("grace@example.com"))
+        .thenReturn(new TotpSeed(1L, "grace@example.com", first.getSecret(), Instant.now()));
+    assertThat(service.verify("grace@example.com", first.getCurrentCode()).getValid()).isTrue();
+
+    TotpGenerateResponse rotated = service.generate("grace@example.com");
+    when(repository.findByAccountName("grace@example.com"))
+        .thenReturn(new TotpSeed(1L, "grace@example.com", rotated.getSecret(), Instant.now()));
+
+    assertThat(service.verify("grace@example.com", first.getCurrentCode()).getValid()).isFalse();
+    assertThat(service.verify("grace@example.com", rotated.getCurrentCode()).getValid()).isTrue();
   }
 }

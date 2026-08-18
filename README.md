@@ -297,6 +297,31 @@ CREATE TABLE IF NOT EXISTS totp_seed (
 - The domain type `TotpSeed` is a plain Java record (`id`, `accountName`, `secret`, `createdAt`) —
   intentionally hand-written rather than OpenAPI-generated, since it never crosses the HTTP
   boundary directly.
+- `secret` is encrypted at rest: [`TotpSecretCipher`](src/main/java/com/learning/totp/crypto/TotpSecretCipher.java)
+  AES-256-GCM encrypts before `upsert` and decrypts after `findByAccountName`, keyed by
+  `totp.secret-encryption-key` (see [§14](#configuration-reference)). The repository only ever
+  hands plaintext to its callers — the ciphertext never leaves this class.
+
+</ul>
+
+### Auth and rate limiting on `/totp/**`
+
+Two gaps from an earlier version of this repo, now closed:
+
+<ul>
+
+- **Auth.** Every `/totp/**` endpoint used to take no identity check at all — anyone who knew an
+  `accountName` could generate/verify/read the QR for it. [`SecurityConfig`](src/main/java/com/learning/config/SecurityConfig.java)
+  now requires HTTP Basic auth on `/totp/**` (everything else — `/qr/**`, `/notifications/**`,
+  Swagger — stays open). Read the javadoc on that class before assuming this is "solved": it's a
+  single shared credential, not per-account authorization — the authenticated principal still
+  isn't checked against the `accountName` in the request. A real deployment needs that additional
+  check.
+- **Rate limiting.** [`TotpVerifyRateLimiter`](src/main/java/com/learning/totp/service/TotpVerifyRateLimiter.java)
+  tracks failed `/totp/verify` attempts per account in a sliding window and returns 429 after 5
+  failures in 5 minutes — a 6-digit code is a 1e6 search space, so verification can't stay
+  uncapped. It's in-process only (fine for this demo's single instance; a real multi-instance
+  deployment needs a shared store).
 
 </ul>
 
@@ -710,6 +735,7 @@ shape (`timestamp`, `status`, `error`, `message`):
 | `QrEncodeException`                  | 400 Bad Request                    | qr                       |
 | `TotpAccountNotFoundException`       | 404 Not Found                      | totp                     |
 | `TotpQrGenerationException`          | 500 Internal Server Error (logged) | totp                     |
+| `TotpRateLimitExceededException`     | 429 Too Many Requests              | totp                     |
 | `NotificationConfigurationException` | 503 Service Unavailable            | notification             |
 | `NotificationDeliveryException`      | 502 Bad Gateway (logged)           | notification             |
 | anything else                        | 500 Internal Server Error (logged) | shared                   |
@@ -749,8 +775,14 @@ fine and simply returns `503` on every call.
   wrong code / unknown account are rejected appropriately, and the QR image render path produces a
   valid PNG (magic number check) or throws for an unknown account.
 - `TotpSeedRepositoryTest` — Testcontainers Postgres, round-trips `upsert`/`findByAccountName`
-  including the on-conflict secret-rotation behavior.
+  including the on-conflict secret-rotation behavior, and asserts the raw DB column is ciphertext,
+  not the plaintext secret.
+- `TotpVerifyRateLimiterTest` — sliding-window failure counting, lockout at the threshold, reset
+  on success, expiry once the window ages out (a fake `Clock` drives the last case).
 - `NotificationServiceTest` — exercises the Pushy-based send path.
+
+Note: `/totp/**` now requires HTTP Basic auth (see above) — `TotpControllerTest` covers both the
+401-when-anonymous case and the authenticated happy paths via `@WithMockUser`.
 
 </ul>
 
@@ -770,3 +802,6 @@ fine and simply returns `503` on every call.
 | `apns.key-id`           | `APNS_KEY_ID`                                 | *(empty)*                                  |
 | `apns.topic`            | `APNS_TOPIC`                                  | *(empty)*                                  |
 | `apns.production`       | `APNS_PRODUCTION`                             | `false`                                    |
+| `spring.security.user.name` | `TOTP_ADMIN_USER`                         | `admin`                                    |
+| `spring.security.user.password` | `TOTP_ADMIN_PASSWORD`                 | `local-dev-only-change-me`                 |
+| `totp.secret-encryption-key` | `TOTP_SECRET_ENCRYPTION_KEY`             | *(fixed local-dev key, see application.yml)* |

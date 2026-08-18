@@ -37,14 +37,16 @@ public class TotpService {
   private static final int PERIOD_SECONDS = 30;
 
   private final TotpSeedRepository seedRepository;
+  private final TotpVerifyRateLimiter rateLimiter;
   private final SecretGenerator secretGenerator = new DefaultSecretGenerator();
   private final TimeProvider timeProvider = new SystemTimeProvider();
   private final CodeGenerator codeGenerator = new DefaultCodeGenerator(HashingAlgorithm.SHA1, DIGITS);
   private final CodeVerifier codeVerifier = buildCodeVerifier();
   private final QrGenerator qrGenerator = new ZxingPngQrGenerator();
 
-  public TotpService(TotpSeedRepository seedRepository) {
+  public TotpService(TotpSeedRepository seedRepository, TotpVerifyRateLimiter rateLimiter) {
     this.seedRepository = seedRepository;
+    this.rateLimiter = rateLimiter;
   }
 
   private CodeVerifier buildCodeVerifier() {
@@ -70,11 +72,17 @@ public class TotpService {
         .otpAuthUri(qrData.getUri());
   }
 
-  /** Verifies. */
+  /** Verifies. Rate-limited per account: {@link TotpVerifyRateLimiter} rejects further attempts after too many recent failures. */
   public TotpVerifyResponse verify(String accountName, String code) {
+    rateLimiter.checkAllowed(accountName);
     TotpSeed seed = findSeedOrThrow(accountName);
     boolean valid = codeVerifier.isValidCode(seed.secret(), code);
     log.info("TOTP | verify | accountName={} | valid={}", accountName, valid);
+    if (valid) {
+      rateLimiter.recordSuccess(accountName);
+    } else {
+      rateLimiter.recordFailure(accountName);
+    }
     return new TotpVerifyResponse().valid(valid);
   }
 
