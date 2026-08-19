@@ -1,4 +1,4 @@
-# <span style="color:hsl(84,68%,32%)">learning-utility</span>
+# <span style="color:hsl(84,80%,58%)">learning-utility</span>
 
 <img src="image/spring-logo.png" alt="Spring" width="70"/>
 
@@ -37,7 +37,7 @@ classes directly.
 
 ---
 
-## <span style="color:hsl(93,68%,32%)">Table of contents</span>
+## <span style="color:hsl(222,80%,58%)">Table of contents</span>
 
 1. 🧰 [Tech stack](#tech-stack)
 2. 🏗️ [Architecture at a glance](#architecture-at-a-glance)
@@ -57,7 +57,7 @@ classes directly.
 ---
 
 <a id="tech-stack"></a>
-## <span style="color:hsl(102,68%,32%)">1. 🧰 Tech stack</span>
+## <span style="color:hsl(359,80%,58%)">1. 🧰 Tech stack</span>
 
 | Concern            | Technology                                                                                                                        |
 |--------------------|-----------------------------------------------------------------------------------------------------------------------------------|
@@ -74,7 +74,7 @@ classes directly.
 ---
 
 <a id="architecture-at-a-glance"></a>
-## <span style="color:hsl(111,68%,32%)">2. 🏗️ Architecture at a glance</span>
+## <span style="color:hsl(137,80%,58%)">2. 🏗️ Architecture at a glance</span>
 
 The three packages share nothing except the top-level Spring Boot application class and the
 common exception-handling advice. There is no service-to-service call anywhere in the codebase.
@@ -124,7 +124,7 @@ that is intentional and reflects the real code, not a simplification.
 ---
 
 <a id="deep-dive-how-totp-actually-works"></a>
-## <span style="color:hsl(120,68%,32%)">3. 🚀 Deep dive: how TOTP actually works</span>
+## <span style="color:hsl(274,80%,58%)">3. 🚀 Deep dive: how TOTP actually works</span>
 
 TOTP (Time-based One-Time Password, [RFC 6238](https://datatracker.ietf.org/doc/html/rfc6238)) is
 the algorithm behind the 6-digit codes in apps like Google Authenticator, Authy, and 1Password's
@@ -132,7 +132,7 @@ built-in authenticator. It is a straightforward extension of **HOTP** (HMAC-base
 Password, [RFC 4226](https://datatracker.ietf.org/doc/html/rfc4226)) where the ever-incrementing
 "counter" is replaced by the current time, divided into fixed windows.
 
-### <span style="color:hsl(129,68%,32%)">The building blocks</span>
+### <span style="color:hsl(52,80%,50%)">The building blocks</span>
 
 1. **A shared secret.** At enrollment, the server generates a random secret (this repo uses a
    Base32-encoded value, e.g. `JBSWY3DPEHPK3PXP`) and both the server and the user's authenticator
@@ -172,7 +172,7 @@ flowchart LR
     F --> G["Zero-padded 6-digit code<br/>e.g. 123456"]
 ```
 
-### <span style="color:hsl(138,68%,32%)">Why verification tolerates clock drift</span>
+### <span style="color:hsl(189,80%,58%)">Why verification tolerates clock drift</span>
 
 Because the server and the authenticator app read their clocks independently, small drift (a few
 seconds of NTP skew, or the delay between generating and typing a code) can push them into
@@ -185,7 +185,7 @@ worst case, depending on where in the window it was generated. This is a deliber
 trade-off: too narrow a window and legitimate users get rejected over minor clock skew; too wide
 and you extend the practical replay window for an attacker who intercepts a code.
 
-### <span style="color:hsl(147,68%,32%)">Enrollment vs. verification, conceptually</span>
+### <span style="color:hsl(327,80%,58%)">Enrollment vs. verification, conceptually</span>
 
 <ul>
 
@@ -205,7 +205,7 @@ and you extend the practical replay window for an attacker who intercepts a code
 ---
 
 <a id="how-this-repo-implements-totp"></a>
-## <span style="color:hsl(156,68%,36%)">4. 🔹 How this repo implements TOTP</span>
+## <span style="color:hsl(104,80%,58%)">4. 🔹 How this repo implements TOTP</span>
 
 All TOTP logic lives in
 [`TotpService`](src/main/java/com/learning/totp/service/TotpService.java), which wires together
@@ -229,7 +229,7 @@ with fixed parameters:
 | Hashing algorithm               | `HashingAlgorithm.SHA1`                       |
 | Allowed time-period discrepancy | `1` (checks previous/current/next 30s window) |
 
-### <span style="color:hsl(165,68%,36%)">Enrollment — `generate(accountName)`</span>
+### <span style="color:hsl(242,80%,58%)">Enrollment — `generate(accountName)`</span>
 
 1. `secretGenerator.generate()` produces a fresh random Base32 secret via
    `DefaultSecretGenerator` — this is a cryptographically random byte sequence, not derived from
@@ -250,7 +250,7 @@ with fixed parameters:
    re-render endpoint (below), which recovers the same secret from Postgres and rebuilds the same
    `otpauth://` URI from it.
 
-### <span style="color:hsl(174,68%,36%)">Verification — `verify(accountName, code)`</span>
+### <span style="color:hsl(19,80%,58%)">Verification — `verify(accountName, code)`</span>
 
 1. `seedRepository.findByAccountName(accountName)` looks up the persisted row; if none exists,
    `TotpAccountNotFoundException` is thrown (mapped to HTTP 404 by `GlobalExceptionHandler`).
@@ -263,7 +263,7 @@ with fixed parameters:
    error (404). This means there's no built-in "N failed attempts locks the account" behavior; the
    endpoint is stateless per call.
 
-### <span style="color:hsl(183,68%,36%)">QR re-render — `generateQrCodeImage(accountName)`</span>
+### <span style="color:hsl(157,80%,58%)">QR re-render — `generateQrCodeImage(accountName)`</span>
 
 Because enrollment only shows the secret/QR code once, `GET /totp/{accountName}/qrcode` lets you
 re-render the *same* enrollment QR from the *already-persisted* secret, in case the first scan was
@@ -272,7 +272,7 @@ digits/period as at generation time), and renders it via `ZxingPngQrGenerator.ge
 wrapping any `QrGenerationException` from the library in this repo's own
 `TotpQrGenerationException` (mapped to HTTP 500).
 
-### <span style="color:hsl(192,68%,36%)">Persistence — `TotpSeedRepository` and the `totp_seed` table</span>
+### <span style="color:hsl(294,80%,58%)">Persistence — `TotpSeedRepository` and the `totp_seed` table</span>
 
 Straight `JdbcTemplate`, no ORM. Schema (Flyway migration
 [`V1__create_totp_seed.sql`](src/main/resources/db/migration/V1__create_totp_seed.sql)):
@@ -304,7 +304,7 @@ CREATE TABLE IF NOT EXISTS totp_seed (
 
 </ul>
 
-### <span style="color:hsl(201,68%,44%)">Auth and rate limiting on `/totp/**`</span>
+### <span style="color:hsl(72,80%,58%)">Auth and rate limiting on `/totp/**`</span>
 
 Two gaps from an earlier version of this repo, now closed:
 
@@ -328,7 +328,7 @@ Two gaps from an earlier version of this repo, now closed:
 ---
 
 <a id="deep-dive-qr-codes-and-how-theyre-used-here"></a>
-## <span style="color:hsl(210,68%,44%)">5. 💡 Deep dive: QR codes and how they're used here</span>
+## <span style="color:hsl(209,80%,58%)">5. 💡 Deep dive: QR codes and how they're used here</span>
 
 An `otpauth://` provisioning QR generated for this app (scan it with any authenticator):
 
@@ -345,7 +345,7 @@ configurable percentage of damaged modules.
 
 This repo touches QR codes in two structurally separate places:
 
-### <span style="color:hsl(219,68%,44%)">1. Generic QR encode/decode — `com.learning.qr`</span>
+### <span style="color:hsl(347,80%,58%)">1. Generic QR encode/decode — `com.learning.qr`</span>
 
 [`QrCodeService`](src/main/java/com/learning/qr/service/QrCodeService.java) has nothing to do with
 TOTP; it's a standalone utility over raw ZXing:
@@ -369,7 +369,7 @@ These two operations are exposed as `GET /qr/generate?text=...&size=...` and
 code" pair, independent of any TOTP concept. You could hand `/qr/generate` any string — a URL, a
 Wi-Fi config, plain text — and it would happily encode it.
 
-### <span style="color:hsl(228,68%,44%)">2. TOTP enrollment QR — `com.learning.totp`, via `dev.samstevens.totp`</span>
+### <span style="color:hsl(124,80%,58%)">2. TOTP enrollment QR — `com.learning.totp`, via `dev.samstevens.totp`</span>
 
 `TotpService` does **not** call `QrCodeService` — it uses `dev.samstevens.totp`'s own
 `ZxingPngQrGenerator`, which internally wraps the same ZXing library but is purpose-built to render
@@ -405,7 +405,7 @@ HMAC-SHA1 derivation described above.
 ---
 
 <a id="the-notification-module-what-it-really-is"></a>
-## <span style="color:hsl(237,68%,44%)">6. 🏗️ The notification module: what it really is</span>
+## <span style="color:hsl(262,80%,58%)">6. 🏗️ The notification module: what it really is</span>
 
 [`NotificationService`](src/main/java/com/learning/notification/service/NotificationService.java)
 sends **Apple Push Notifications (APNs)** using the [Pushy](https://github.com/relayrides/pushy)
@@ -413,7 +413,7 @@ client library. It is a complete, independent demo of one thing: submitting an a
 single iOS device token. It is not a generic "notify the user" abstraction and it is not consulted
 anywhere in the TOTP flow.
 
-### <span style="color:hsl(246,68%,44%)">Configuration and conditional wiring</span>
+### <span style="color:hsl(39,80%,58%)">Configuration and conditional wiring</span>
 
 [`ApnsClientConfig`](src/main/java/com/learning/notification/config/ApnsClientConfig.java) only
 constructs the `ApnsClient` bean when `apns.enabled=true` (`@ConditionalOnProperty`). When
@@ -439,7 +439,7 @@ auth — tokens don't expire the way certificates do, which is why the comment i
 `application.yml` calls this out explicitly. The client is pointed at Apple's development or
 production APNs host depending on `apns.production`.
 
-### <span style="color:hsl(255,68%,44%)">Sending a notification</span>
+### <span style="color:hsl(177,80%,58%)">Sending a notification</span>
 
 `NotificationService.send(deviceToken, title, body, badge)`:
 
@@ -453,7 +453,7 @@ production APNs host depending on `apns.production`.
 4. Returns whether APNs accepted the notification, the APNs-assigned notification ID, and (when
    rejected) APNs' `rejectionReason` string (e.g. `BadDeviceToken`).
 
-### <span style="color:hsl(264,68%,44%)">Why it's covered in this README at all</span>
+### <span style="color:hsl(314,80%,58%)">Why it's covered in this README at all</span>
 
 It's a legitimate, self-contained piece of the codebase and worth understanding on its own terms
 — but to be explicit about the boundary: nothing in `TotpService` or `TotpController` references
@@ -464,9 +464,9 @@ that already exists and is just undocumented.
 ---
 
 <a id="sequence-diagrams"></a>
-## <span style="color:hsl(273,68%,44%)">7. 🔹 Sequence diagrams</span>
+## <span style="color:hsl(92,80%,58%)">7. 🔹 Sequence diagrams</span>
 
-### <span style="color:hsl(282,68%,44%)">Enrollment flow — generate a secret, then scan it into an authenticator app</span>
+### <span style="color:hsl(229,80%,58%)">Enrollment flow — generate a secret, then scan it into an authenticator app</span>
 
 ```mermaid
 sequenceDiagram
@@ -509,7 +509,7 @@ sequenceDiagram
     Note over App: App can now generate codes<br/>completely offline
 ```
 
-### <span style="color:hsl(291,68%,44%)">Verification flow — user submits a code, server validates it against the time window</span>
+### <span style="color:hsl(7,80%,58%)">Verification flow — user submits a code, server validates it against the time window</span>
 
 ```mermaid
 sequenceDiagram
@@ -550,7 +550,7 @@ sequenceDiagram
 ---
 
 <a id="project-structure"></a>
-## <span style="color:hsl(300,68%,44%)">8. 🏗️ Project structure</span>
+## <span style="color:hsl(144,80%,58%)">8. 🏗️ Project structure</span>
 
 ```
 src/main/java/com/learning/
@@ -595,11 +595,11 @@ src/main/resources/
 ---
 
 <a id="api-reference"></a>
-## <span style="color:hsl(309,68%,44%)">9. 📚 API reference</span>
+## <span style="color:hsl(282,80%,58%)">9. 📚 API reference</span>
 
-### <span style="color:hsl(318,68%,44%)">QR module</span>
+### <span style="color:hsl(59,80%,50%)">QR module</span>
 
-#### <span style="color:hsl(327,68%,44%)">`GET /qr/generate` — encode arbitrary text as a QR code PNG</span>
+#### <span style="color:hsl(197,80%,58%)">`GET /qr/generate` — encode arbitrary text as a QR code PNG</span>
 
 ```bash
 curl -s "http://localhost:8095/qr/generate?text=hello-world&size=300" -o qr.png
@@ -608,7 +608,7 @@ curl -s "http://localhost:8095/qr/generate?text=hello-world&size=300" -o qr.png
 Returns `image/png`. `size` must be between 100 and 1000 (inclusive); `text` must not be empty.
 Both violations return `400` with an `ApiError` body (`QrEncodeException`).
 
-#### <span style="color:hsl(336,68%,44%)">`POST /qr/scan` — decode a QR code from an uploaded image</span>
+#### <span style="color:hsl(334,80%,58%)">`POST /qr/scan` — decode a QR code from an uploaded image</span>
 
 ```bash
 curl -s -X POST http://localhost:8095/qr/scan -F "file=@/path/to/qr.png"
@@ -620,9 +620,9 @@ curl -s -X POST http://localhost:8095/qr/scan -F "file=@/path/to/qr.png"
 
 `400` if the file is empty, isn't a readable image, or contains no QR code (`QrDecodeException`).
 
-### <span style="color:hsl(345,68%,44%)">TOTP module</span>
+### <span style="color:hsl(112,80%,58%)">TOTP module</span>
 
-#### <span style="color:hsl(354,68%,44%)">`POST /totp/generate` — create and persist a new seed</span>
+#### <span style="color:hsl(249,80%,58%)">`POST /totp/generate` — create and persist a new seed</span>
 
 ```bash
 curl -s -X POST http://localhost:8095/totp/generate \
@@ -645,7 +645,7 @@ authenticator app. `currentCode` is the 6-digit code valid right now — include
 convenience (normally an authenticator app computes this from the `otpAuthUri`/secret on the
 client side, not the server).
 
-#### <span style="color:hsl(3,68%,44%)">`POST /totp/verify` — verify a code against the saved seed</span>
+#### <span style="color:hsl(27,80%,58%)">`POST /totp/verify` — verify a code against the saved seed</span>
 
 ```bash
 curl -s -X POST http://localhost:8095/totp/verify \
@@ -660,7 +660,7 @@ curl -s -X POST http://localhost:8095/totp/verify \
 A wrong code is `200 { "valid": false }`, not an error. `404` (`ApiError`) only if no seed has
 ever been generated for that account (`TotpAccountNotFoundException`).
 
-#### <span style="color:hsl(12,68%,44%)">`GET /totp/{accountName}/qrcode` — render the enrollment URI as a scannable QR code</span>
+#### <span style="color:hsl(164,80%,58%)">`GET /totp/{accountName}/qrcode` — render the enrollment URI as a scannable QR code</span>
 
 ```bash
 curl -s http://localhost:8095/totp/alice@example.com/qrcode -o qr.png
@@ -672,9 +672,9 @@ without typing the secret by hand. Built with `dev.samstevens.totp`'s `ZxingPngQ
 through a separate code path — see the QR deep dive above). `404` if no seed exists yet for the
 account.
 
-### <span style="color:hsl(21,68%,44%)">Notification module</span>
+### <span style="color:hsl(302,80%,58%)">Notification module</span>
 
-#### <span style="color:hsl(30,68%,44%)">`POST /notifications/send` — send an Apple Push Notification to a device</span>
+#### <span style="color:hsl(79,80%,58%)">`POST /notifications/send` — send an Apple Push Notification to a device</span>
 
 ```bash
 curl -s -X POST http://localhost:8095/notifications/send \
@@ -704,7 +704,7 @@ An Insomnia collection covering all endpoints is at `insomnia-collection.json` (
 ---
 
 <a id="data-model"></a>
-## <span style="color:hsl(39,68%,44%)">10. 🤖 Data model</span>
+## <span style="color:hsl(217,80%,58%)">10. 🤖 Data model</span>
 
 The only persisted state in the whole application is the `totp_seed` table (Flyway migration
 `V1__create_totp_seed.sql`):
@@ -722,7 +722,7 @@ database.
 ---
 
 <a id="error-handling"></a>
-## <span style="color:hsl(48,68%,32%)">11. ⚠️ Error handling</span>
+## <span style="color:hsl(354,80%,58%)">11. ⚠️ Error handling</span>
 
 [`GlobalExceptionHandler`](src/main/java/com/learning/common/web/GlobalExceptionHandler.java) maps
 every exception that escapes a controller, across all three packages, to a shared `ApiError` JSON
@@ -743,7 +743,7 @@ shape (`timestamp`, `status`, `error`, `message`):
 ---
 
 <a id="running"></a>
-## <span style="color:hsl(57,68%,32%)">12. 🚀 Running</span>
+## <span style="color:hsl(132,80%,58%)">12. 🚀 Running</span>
 
 ```bash
 docker compose up -d postgres
@@ -760,7 +760,7 @@ fine and simply returns `503` on every call.
 ---
 
 <a id="testing"></a>
-## <span style="color:hsl(66,68%,32%)">13. 🧪 Testing</span>
+## <span style="color:hsl(269,80%,58%)">13. 🧪 Testing</span>
 
 ```bash
 ./mvnw test
@@ -789,7 +789,7 @@ Note: `/totp/**` now requires HTTP Basic auth (see above) — `TotpControllerTes
 ---
 
 <a id="configuration-reference"></a>
-## <span style="color:hsl(75,68%,32%)">14. 📚 Configuration reference</span>
+## <span style="color:hsl(47,80%,50%)">14. 📚 Configuration reference</span>
 
 | Property                | Env var                                       | Default                                    |
 |-------------------------|-----------------------------------------------|--------------------------------------------|
