@@ -62,9 +62,9 @@ classes directly.
 | Concern            | Technology                                                                                                                        |
 |--------------------|-----------------------------------------------------------------------------------------------------------------------------------|
 | Language           | Java 25                                                                                                                           |
-| Framework          | Spring Boot 4.1.0, Spring MVC                                                                                                     |
+| Framework          | Spring Boot 4.1.1 (super-pom 1.1.2, as of 2026), Spring MVC                                                                        |
 | QR encode/decode   | ZXing (`com.google.zxing:core` + `javase`)                                                                                        |
-| TOTP               | `dev.samstevens.totp:totp` (itself uses ZXing internally for QR rendering)                                                        |
+| TOTP               | `dev.samstevens.totp:totp` 1.7.1 (uses ZXing internally for QR rendering). Note: no release since Nov 2020 — it works (verified against an independent RFC 6238 computation) but is unmaintained; weigh that before production use |
 | Push notifications | `com.eatthepath:pushy` (APNs HTTP/2 client, token-based `.p8` auth)                                                               |
 | Persistence        | Spring JDBC (`JdbcTemplate`) + PostgreSQL + Flyway                                                                                |
 | API docs           | springdoc-openapi (Swagger UI)                                                                                                    |
