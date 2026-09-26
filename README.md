@@ -90,7 +90,7 @@ graph TB
     end
 
     subgraph "com.learning.totp — RFC 6238 TOTP / 2FA"
-        TC[TotpController<br/>/totp/generate, /totp/verify,<br/>/totp/{account}/qrcode]
+        TC["TotpController<br/>/totp/generate, /totp/verify,<br/>/totp/{account}/qrcode"]
         TS[TotpService]
         TR[TotpSeedRepository]
         TC --> TS
@@ -258,10 +258,15 @@ with fixed parameters:
    `setTimePeriod(30)` and `setAllowedTimePeriodDiscrepancy(1)` — recomputes the expected code for
    the current time step and the +/-1 adjacent step(s) using the *same* `codeGenerator` used at
    enrollment, and compares against the supplied `code`.
-3. The boolean result is returned as `{ "valid": true|false }`. Note this is not an exception path:
-   a wrong code is a normal `valid: false` response, HTTP 200 — only an *unknown account* is an
-   error (404). This means there's no built-in "N failed attempts locks the account" behavior; the
-   endpoint is stateless per call.
+3. If the code matched, the matching time step is recorded with one conditional
+   `UPDATE totp_seed SET last_used_step = ? … WHERE last_used_step < ?` (`markStepUsed`, Flyway `V3`).
+   Zero rows updated means the code — or an older one — was already accepted, so it counts as
+   invalid: a code is single-use (RFC 6238 §5.2), and two concurrent submissions of one code can't
+   both succeed. Re-enrolling (rotating the secret) resets the marker.
+4. The boolean result is returned as `{ "valid": true|false }`. Note this is not an exception path:
+   a wrong or replayed code is a normal `valid: false` response, HTTP 200 — only an *unknown
+   account* is an error (404). Repeated failures are capped separately by `TotpVerifyRateLimiter`
+   (429 after 5 failures in 5 minutes, see below).
 
 ### <span style="color:hsl(157,80%,58%)">QR re-render — `generateQrCodeImage(accountName)`</span>
 
@@ -317,6 +322,9 @@ Two gaps from an earlier version of this repo, now closed:
   single shared credential, not per-account authorization — the authenticated principal still
   isn't checked against the `accountName` in the request. A real deployment needs that additional
   check.
+- **Single-use codes.** An accepted code's time step is stored in `totp_seed.last_used_step`; the
+  same or an older code is rejected afterwards, so an intercepted code can't be replayed inside
+  its ±30 s window.
 - **Rate limiting.** [`TotpVerifyRateLimiter`](src/main/java/com/learning/totp/service/TotpVerifyRateLimiter.java)
   tracks failed `/totp/verify` attempts per account in a sliding window and returns 429 after 5
   failures in 5 minutes — a 6-digit code is a 1e6 search space, so verification can't stay
@@ -538,7 +546,13 @@ sequenceDiagram
         Ver->>Ver: recompute code for counter-1, counter, counter+1<br/>(allowed discrepancy = 1)
         alt code matches any allowed window
             Ver-->>Svc: true
-            Svc-->>API: {valid: true}
+            Svc->>Repo: markStepUsed(accountName, matched counter)
+            Repo->>DB: UPDATE ... SET last_used_step = ? WHERE last_used_step < ?
+            alt first use of this counter
+                Svc-->>API: {valid: true}
+            else already used (replay)
+                Svc-->>API: {valid: false}
+            end
         else no match
             Ver-->>Svc: false
             Svc-->>API: {valid: false}

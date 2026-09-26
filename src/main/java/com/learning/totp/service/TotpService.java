@@ -21,6 +21,8 @@ import dev.samstevens.totp.secret.DefaultSecretGenerator;
 import dev.samstevens.totp.secret.SecretGenerator;
 import dev.samstevens.totp.time.SystemTimeProvider;
 import dev.samstevens.totp.time.TimeProvider;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -76,7 +78,10 @@ public class TotpService {
   public TotpVerifyResponse verify(String accountName, String code) {
     rateLimiter.checkAllowed(accountName);
     TotpSeed seed = findSeedOrThrow(accountName);
-    boolean valid = codeVerifier.isValidCode(seed.secret(), code);
+    // Single use (RFC 6238 §5.2): a correct code only counts if its time step is newer than the
+    // last accepted one — otherwise an intercepted code could be replayed within its window.
+    boolean valid = codeVerifier.isValidCode(seed.secret(), code)
+        && seedRepository.markStepUsed(accountName, matchingTimeStep(seed.secret(), code));
     log.info("TOTP | verify | accountName={} | valid={}", accountName, valid);
     if (valid) {
       rateLimiter.recordSuccess(accountName);
@@ -105,6 +110,25 @@ public class TotpService {
       throw new TotpAccountNotFoundException(accountName);
     }
     return seed;
+  }
+
+  /** The time step within the accepted window (±1) whose code equals {@code code}. */
+  private long matchingTimeStep(String secret, String code) {
+    long current = Math.floorDiv(timeProvider.getTime(), PERIOD_SECONDS);
+    for (long step = current - 1; step <= current + 1; step++) {
+      try {
+        if (MessageDigest.isEqual(
+            codeGenerator.generate(secret, step).getBytes(StandardCharsets.US_ASCII),
+            code.getBytes(StandardCharsets.US_ASCII))) {
+          return step;
+        }
+      } catch (CodeGenerationException e) {
+        throw new CodeGenerationFailedException("Failed to recompute the TOTP code during verification", e);
+      }
+    }
+    // Accepted a moment ago, so only a time-step boundary in between gets here: the match was the
+    // step that has just left the window.
+    return current - 2;
   }
 
   private String currentCode(String secret) {

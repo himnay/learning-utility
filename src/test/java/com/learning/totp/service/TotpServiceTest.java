@@ -3,6 +3,7 @@ package com.learning.totp.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -22,6 +23,11 @@ class TotpServiceTest {
   private final TotpSeedRepository repository = mock(TotpSeedRepository.class);
   private final TotpVerifyRateLimiter rateLimiter = new TotpVerifyRateLimiter();
   private final TotpService service = new TotpService(repository, rateLimiter);
+
+  {
+    // First use of any time step succeeds; replays are covered by verifyRejectsAReplayedCode.
+    when(repository.markStepUsed(any(), anyLong())).thenReturn(true);
+  }
 
   @Test
   @DisplayName("generate() saves the new secret and returns a valid current code + otpauth URI")
@@ -108,5 +114,17 @@ class TotpServiceTest {
 
     assertThat(service.verify("grace@example.com", first.getCurrentCode()).getValid()).isFalse();
     assertThat(service.verify("grace@example.com", rotated.getCurrentCode()).getValid()).isTrue();
+  }
+
+  @Test
+  @DisplayName("verify() returns valid=false when the code's time step was already used (replay)")
+  void verifyRejectsAReplayedCode() {
+    TotpGenerateResponse generated = service.generate("heidi@example.com");
+    when(repository.findByAccountName("heidi@example.com"))
+        .thenReturn(new TotpSeed(1L, "heidi@example.com", generated.getSecret(), Instant.now()));
+    when(repository.markStepUsed(eq("heidi@example.com"), anyLong())).thenReturn(true, false);
+
+    assertThat(service.verify("heidi@example.com", generated.getCurrentCode()).getValid()).isTrue();
+    assertThat(service.verify("heidi@example.com", generated.getCurrentCode()).getValid()).isFalse();
   }
 }

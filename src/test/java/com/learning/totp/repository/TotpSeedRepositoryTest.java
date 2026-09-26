@@ -76,4 +76,18 @@ class TotpSeedRepositoryTest {
     assertThat(rawColumnValue).isNotEqualTo(plaintext);
     assertThat(repository.findByAccountName("frank@example.com").secret()).isEqualTo(plaintext);
   }
+
+  @Test
+  @DisplayName("markStepUsed() accepts only newer time steps, and rotating the secret resets it")
+  void markStepUsedRejectsReplays() {
+    repository.upsert("ivan@example.com", "JBSWY3DPEHPK3PXP");
+
+    assertThat(repository.markStepUsed("ivan@example.com", 100)).isTrue();
+    assertThat(repository.markStepUsed("ivan@example.com", 100)).as("same step = replay").isFalse();
+    assertThat(repository.markStepUsed("ivan@example.com", 99)).as("older step").isFalse();
+    assertThat(repository.markStepUsed("ivan@example.com", 101)).isTrue();
+
+    repository.upsert("ivan@example.com", "KRSXG5CTMVRXEZLU");
+    assertThat(repository.markStepUsed("ivan@example.com", 50)).isTrue();
+  }
 }
