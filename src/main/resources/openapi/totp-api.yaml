@@ -40,7 +40,7 @@ components:
         otpAuthUri:
           type: string
           description: otpauth:// URI suitable for rendering as a QR code in an authenticator app.
-          example: "otpauth://totp/learning-utility:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=learning-utility"
+          example: "otpauth://totp/alice%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=learning-utility&algorithm=SHA1&digits=6&period=30"
     TotpVerifyRequest:
       type: object
       required:

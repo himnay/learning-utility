@@ -9,7 +9,7 @@
       "_type": "workspace",
       "parentId": null,
       "name": "learning-utility",
-      "description": "QR code scanning (ZXing) + TOTP generation/verification (dev.samstevens.totp) demo APIs"
+      "description": "QR code scanning (ZXing), TOTP generation/verification (dev.samstevens.totp) and APNs push notification (Pushy) demo APIs"
     },
     {
       "_id": "env_base",
@@ -17,7 +17,9 @@
       "parentId": "wrk_learning_utility",
       "name": "Base Environment",
       "data": {
-        "baseUrl": "http://localhost:8095"
+        "baseUrl": "http://localhost:8095",
+        "totpUser": "admin",
+        "totpPassword": "local-dev-only-change-me"
       }
     },
     {
@@ -86,7 +88,12 @@
           "name": "Content-Type",
           "value": "application/json"
         }
-      ]
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.totpUser }}",
+        "password": "{{ _.totpPassword }}"
+      }
     },
     {
       "_id": "req_totp_verify",
@@ -104,7 +111,12 @@
           "name": "Content-Type",
           "value": "application/json"
         }
-      ]
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.totpUser }}",
+        "password": "{{ _.totpPassword }}"
+      }
     },
     {
       "_id": "req_totp_qrcode",
@@ -113,7 +125,36 @@
       "name": "Get Enrollment QR Code",
       "method": "GET",
       "url": "{{ _.baseUrl }}/totp/alice@example.com/qrcode",
-      "headers": []
+      "headers": [],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.totpUser }}",
+        "password": "{{ _.totpPassword }}"
+      }
+    },
+    {
+      "_id": "fld_notification",
+      "_type": "request_group",
+      "parentId": "wrk_learning_utility",
+      "name": "Notifications (com.learning.notification)"
+    },
+    {
+      "_id": "req_notification_send",
+      "_type": "request",
+      "parentId": "fld_notification",
+      "name": "Send Apple Push Notification",
+      "method": "POST",
+      "url": "{{ _.baseUrl }}/notifications/send",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"deviceToken\": \"740f4707bebcf74f9b7c25d48e3358945f6aa01da5ddb387462c7eaf61bb78a0\",\n  \"title\": \"New message\",\n  \"body\": \"You have a new message from Alice.\",\n  \"badge\": 1\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ]
     }
   ]
 }

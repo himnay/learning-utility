@@ -61,8 +61,8 @@ classes directly.
 
 | Concern            | Technology                                                                                                                        |
 |--------------------|-----------------------------------------------------------------------------------------------------------------------------------|
-| Language           | Java 25                                                                                                                           |
-| Framework          | Spring Boot 4.1.1 (super-pom 1.1.3, as of 2026), Spring MVC                                                                        |
+| Language           | Java 27                                                                                                                           |
+| Framework          | Spring Boot 4.1.1 (super-pom 1.2.0, as of 2026), Spring MVC                                                                        |
 | QR encode/decode   | ZXing (`com.google.zxing:core` + `javase`)                                                                                        |
 | TOTP               | `dev.samstevens.totp:totp` 1.7.1 (uses ZXing internally for QR rendering). Note: no release since Nov 2020 — it works (verified against an independent RFC 6238 computation) but is unmaintained; weigh that before production use |
 | Push notifications | `com.eatthepath:pushy` (APNs HTTP/2 client, token-based `.p8` auth)                                                               |
@@ -179,9 +179,10 @@ seconds of NTP skew, or the delay between generating and typing a code) can push
 adjacent time windows. Verifiers compensate by checking not just the current time step's code, but
 also one or more adjacent steps ("allowed discrepancy" / "window"). This repo's verifier is
 configured with a discrepancy of **1**, meaning it accepts a code that matches the previous, current,
-or next 30-second window — an effective +/-30 second tolerance beyond the current window, so a code
-is valid for up to ~90 seconds from generation in the best case and as little as ~30 seconds in the
-worst case, depending on where in the window it was generated. This is a deliberate security/UX
+or next 30-second window — an effective +/-30 second tolerance beyond the current window. The server
+therefore accepts each code for 90 seconds in total, but a third of that lies before the app shows
+it: once a code appears, there are between ~30 and ~60 seconds left to submit it, depending on
+where in its window it appeared. This is a deliberate security/UX
 trade-off: too narrow a window and legitimate users get rejected over minor clock skew; too wide
 and you extend the practical replay window for an attacker who intercepts a code.
 
@@ -209,7 +210,7 @@ and you extend the practical replay window for an attacker who intercepts a code
 
 All TOTP logic lives in
 [`TotpService`](src/main/java/com/learning/totp/service/TotpService.java), which wires together
-four collaborators from `dev.samstevens.totp`:
+five collaborators from `dev.samstevens.totp`:
 
 ```java
 private final SecretGenerator secretGenerator = new DefaultSecretGenerator();
@@ -279,8 +280,10 @@ wrapping any [`QrGenerationException`][QrGenerationException] from the library i
 
 ### <span style="color:hsl(294,80%,58%)">Persistence — `TotpSeedRepository` and the `totp_seed` table</span>
 
-Straight [`JdbcTemplate`][JdbcTemplate], no ORM. Schema (Flyway migration
-[`V1__create_totp_seed.sql`](src/main/resources/db/migration/V1__create_totp_seed.sql)):
+Straight [`JdbcTemplate`][JdbcTemplate], no ORM. The schema as Flyway migration
+[`V1__create_totp_seed.sql`](src/main/resources/db/migration/V1__create_totp_seed.sql) creates it;
+`V2` widens `secret` to `VARCHAR(255)` for the ciphertext and `V3` adds `last_used_step` (see
+[§10](#data-model)):
 
 ```sql
 CREATE TABLE IF NOT EXISTS totp_seed (
@@ -311,7 +314,7 @@ CREATE TABLE IF NOT EXISTS totp_seed (
 
 ### <span style="color:hsl(72,80%,58%)">Auth and rate limiting on `/totp/**`</span>
 
-Two gaps from an earlier version of this repo, now closed:
+Three gaps from an earlier version of this repo, now closed:
 
 <ul>
 
@@ -350,6 +353,9 @@ modes (numeric, alphanumeric, byte, kanji) chosen automatically to minimize size
 is protected by Reed-Solomon error correction, which is why a QR code with a logo punched out of
 its center, or one that's partly torn, is often still scannable — the redundancy tolerates a
 configurable percentage of damaged modules.
+
+<p align="center"><img src="image/qr-code-structure.png" alt="Anatomy of a QR code: position (finder), alignment and timing patterns, format and version information, the data area and the quiet zone" width="640"/></p>
+<p align="center"><sub>The functional regions of a QR code; the finder patterns are labelled "Position". Diagram: <a href="https://commons.wikimedia.org/wiki/File:QR_Code_Structure_Example_3.svg">QR Code Structure Example 3</a> by Bobmath, CC BY-SA 3.0.</sub></p>
 
 This repo touches QR codes in two structurally separate places:
 
@@ -416,7 +422,7 @@ HMAC-SHA1 derivation described above.
 ## <span style="color:hsl(262,80%,58%)">6. 🏗️ The notification module: what it really is</span>
 
 [`NotificationService`](src/main/java/com/learning/notification/service/NotificationService.java)
-sends **Apple Push Notifications (APNs)** using the [Pushy](https://github.com/relayrides/pushy)
+sends **Apple Push Notifications (APNs)** using the [Pushy](https://github.com/jchambers/pushy)
 client library. It is a complete, independent demo of one thing: submitting an alert push to a
 single iOS device token. It is not a generic "notify the user" abstraction and it is not consulted
 anywhere in the TOTP flow.
@@ -579,11 +585,14 @@ src/main/java/com/learning/
     web/TotpController.java            POST /totp/generate, POST /totp/verify,
                                         GET /totp/{accountName}/qrcode
     service/TotpService.java           dev.samstevens.totp generate/verify + otpauth URI + QR render
+    service/TotpVerifyRateLimiter.java per-account lockout: 429 after 5 failures in 5 minutes
     service/TotpQrCodeImage.java       record: PNG bytes + MIME type
+    crypto/TotpSecretCipher.java       AES-256-GCM encryption of the secret at rest
     domain/TotpSeed.java               persisted row (hand-written, not OpenAPI-generated)
-    repository/TotpSeedRepository.java JdbcTemplate, upsert-on-conflict
+    repository/TotpSeedRepository.java JdbcTemplate, upsert-on-conflict, markStepUsed (replay guard)
     exception/TotpAccountNotFoundException.java
     exception/TotpQrGenerationException.java
+    exception/TotpRateLimitExceededException.java
     exception/CodeGenerationFailedException.java
 
   notification/
@@ -594,6 +603,7 @@ src/main/java/com/learning/
     exception/NotificationConfigurationException.java
     exception/NotificationDeliveryException.java
 
+  config/SecurityConfig.java               HTTP Basic auth on /totp/**
   common/web/GlobalExceptionHandler.java   shared @RestControllerAdvice for all three packages
 
 src/main/resources/
@@ -603,6 +613,8 @@ src/main/resources/
     totp-api.yaml             -> generates com.learning.totp.web.dto.Totp*Request/Response
     notification-api.yaml    -> generates com.learning.notification.web.dto.Notification*Request/Response
   db/migration/V1__create_totp_seed.sql
+  db/migration/V2__widen_totp_secret_for_encryption.sql
+  db/migration/V3__add_totp_last_used_step.sql
   application.yml
 ```
 
@@ -636,10 +648,14 @@ curl -s -X POST http://localhost:8095/qr/scan -F "file=@/path/to/qr.png"
 
 ### <span style="color:hsl(112,80%,58%)">TOTP module</span>
 
+Every `/totp/**` call needs HTTP Basic auth: `admin` / `local-dev-only-change-me` unless
+`TOTP_ADMIN_USER` / `TOTP_ADMIN_PASSWORD` say otherwise (see [§14](#configuration-reference)).
+Without it the answer is `401`.
+
 #### <span style="color:hsl(249,80%,58%)">`POST /totp/generate` — create and persist a new seed</span>
 
 ```bash
-curl -s -X POST http://localhost:8095/totp/generate \
+curl -s -u admin:local-dev-only-change-me -X POST http://localhost:8095/totp/generate \
   -H "Content-Type: application/json" \
   -d '{"accountName": "alice@example.com"}'
 ```
@@ -662,7 +678,7 @@ client side, not the server).
 #### <span style="color:hsl(27,80%,58%)">`POST /totp/verify` — verify a code against the saved seed</span>
 
 ```bash
-curl -s -X POST http://localhost:8095/totp/verify \
+curl -s -u admin:local-dev-only-change-me -X POST http://localhost:8095/totp/verify \
   -H "Content-Type: application/json" \
   -d '{"accountName": "alice@example.com", "code": "123456"}'
 ```
@@ -671,13 +687,14 @@ curl -s -X POST http://localhost:8095/totp/verify \
 { "valid": true }
 ```
 
-A wrong code is `200 { "valid": false }`, not an error. `404` (`ApiError`) only if no seed has
-ever been generated for that account (`TotpAccountNotFoundException`).
+A wrong or already-used code is `200 { "valid": false }`, not an error. `404` (`ApiError`) if no
+seed has ever been generated for that account (`TotpAccountNotFoundException`), `429` after 5
+failed attempts within 5 minutes (`TotpRateLimitExceededException`).
 
 #### <span style="color:hsl(164,80%,58%)">`GET /totp/{accountName}/qrcode` — render the enrollment URI as a scannable QR code</span>
 
 ```bash
-curl -s http://localhost:8095/totp/alice@example.com/qrcode -o qr.png
+curl -s -u admin:local-dev-only-change-me http://localhost:8095/totp/alice@example.com/qrcode -o qr.png
 ```
 
 Returns an `image/png` body — open `qr.png` and scan it with Google Authenticator/Authy to enroll
@@ -694,7 +711,7 @@ account.
 curl -s -X POST http://localhost:8095/notifications/send \
   -H "Content-Type: application/json" \
   -d '{
-        "deviceToken": "740f4707bebcf74f9b7c25d48e3358945f6aa01da5ddb387462c7eaf61bb78a",
+        "deviceToken": "740f4707bebcf74f9b7c25d48e3358945f6aa01da5ddb387462c7eaf61bb78a0",
         "title": "New message",
         "body": "You have a new message from Alice.",
         "badge": 1
@@ -711,24 +728,26 @@ request or the call fails at the network layer (`NotificationDeliveryException`)
 
 ---
 
-An Insomnia collection covering all endpoints is at `insomnia-collection.json` (import it directly
-— no auth/environment setup needed beyond the `baseUrl` variable, defaulted to
-`http://localhost:8095`).
+An Insomnia collection covering all endpoints is at `insomnia-collection.json`. Its environment
+holds `baseUrl` (`http://localhost:8095`) and the Basic-auth credentials the TOTP requests send
+(`totpUser` / `totpPassword`, set to the local-dev defaults).
 
 ---
 
 <a id="data-model"></a>
 ## <span style="color:hsl(217,80%,58%)">10. 🤖 Data model</span>
 
-The only persisted state in the whole application is the `totp_seed` table (Flyway migration
-`V1__create_totp_seed.sql`):
+The only persisted state in the whole application is the `totp_seed` table (Flyway migrations
+`V1__create_totp_seed.sql`, `V2__widen_totp_secret_for_encryption.sql` and
+`V3__add_totp_last_used_step.sql`):
 
-| Column         | Type           | Notes                                           |
-|----------------|----------------|-------------------------------------------------|
-| `id`           | `BIGSERIAL`    | primary key                                     |
-| `account_name` | `VARCHAR(100)` | `NOT NULL UNIQUE` — one seed per account        |
-| `secret`       | `VARCHAR(64)`  | `NOT NULL` — Base32-encoded TOTP secret         |
-| `created_at`   | `TIMESTAMPTZ`  | `NOT NULL DEFAULT NOW()`, refreshed on rotation |
+| Column           | Type           | Notes                                                                                        |
+|------------------|----------------|----------------------------------------------------------------------------------------------|
+| `id`             | `BIGSERIAL`    | primary key                                                                                  |
+| `account_name`   | `VARCHAR(100)` | `NOT NULL UNIQUE` — one seed per account                                                     |
+| `secret`         | `VARCHAR(255)` | `NOT NULL` — AES-256-GCM ciphertext of the Base32 secret, base64(iv ‖ ciphertext+tag) (`V2`) |
+| `created_at`     | `TIMESTAMPTZ`  | `NOT NULL DEFAULT NOW()`, refreshed on rotation                                              |
+| `last_used_step` | `BIGINT`       | time step of the last accepted code, the replay guard; reset on rotation (`V3`)              |
 
 QR and notification endpoints are entirely stateless — nothing they touch is written to the
 database.
@@ -742,17 +761,18 @@ database.
 every exception that escapes a controller, across all three packages, to a shared `ApiError` JSON
 shape (`timestamp`, `status`, `error`, `message`):
 
-| Exception                                                            | HTTP status                        | Module                   |
-|----------------------------------------------------------------------|------------------------------------|--------------------------|
-| [`MethodArgumentNotValidException`][MethodArgumentNotValidException] | 400 Bad Request                    | shared (Bean Validation) |
-| `QrDecodeException`                                                  | 400 Bad Request                    | qr                       |
-| `QrEncodeException`                                                  | 400 Bad Request                    | qr                       |
-| `TotpAccountNotFoundException`                                       | 404 Not Found                      | totp                     |
-| `TotpQrGenerationException`                                          | 500 Internal Server Error (logged) | totp                     |
-| `TotpRateLimitExceededException`                                     | 429 Too Many Requests              | totp                     |
-| `NotificationConfigurationException`                                 | 503 Service Unavailable            | notification             |
-| `NotificationDeliveryException`                                      | 502 Bad Gateway (logged)           | notification             |
-| anything else                                                        | 500 Internal Server Error (logged) | shared                   |
+| Exception                                                                                                                | HTTP status                            | Module                                    |
+|--------------------------------------------------------------------------------------------------------------------------|----------------------------------------|-------------------------------------------|
+| [`MethodArgumentNotValidException`][MethodArgumentNotValidException]                                                     | 400 Bad Request                        | shared (Bean Validation)                  |
+| `QrDecodeException`                                                                                                      | 400 Bad Request                        | qr                                        |
+| `QrEncodeException`                                                                                                      | 400 Bad Request                        | qr                                        |
+| `TotpAccountNotFoundException`                                                                                           | 404 Not Found                          | totp                                      |
+| `TotpQrGenerationException`                                                                                              | 500 Internal Server Error (logged)     | totp                                      |
+| `TotpRateLimitExceededException`                                                                                         | 429 Too Many Requests                  | totp                                      |
+| `NotificationConfigurationException`                                                                                     | 503 Service Unavailable                | notification                              |
+| `NotificationDeliveryException`                                                                                          | 502 Bad Gateway (logged)               | notification                              |
+| Spring MVC's own exceptions: malformed JSON, missing or mistyped parameter, wrong method, unknown path, upload too large | their own 4xx: 400, 405, 404, 413, ... | shared (`ResponseEntityExceptionHandler`) |
+| anything else                                                                                                            | 500 Internal Server Error (logged)     | shared                                    |
 
 ---
 
@@ -761,7 +781,7 @@ shape (`timestamp`, `status`, `error`, `message`):
 
 ```bash
 docker compose up -d postgres
-./mvnw spring-boot:run
+mvn spring-boot:run
 ```
 
 Swagger UI: `http://localhost:8095/swagger-ui.html`
@@ -777,14 +797,15 @@ fine and simply returns `503` on every call.
 ## <span style="color:hsl(269,80%,58%)">13. 🧪 Testing</span>
 
 ```bash
-./mvnw test
+mvn test
 ```
 
 <ul>
 
 - `QrCodeServiceTest` — generates a real QR PNG in-memory (ZXing encoder) and asserts the service
   decodes it back to the original text; also covers the no-QR-found and not-an-image error paths.
-- `QrCodeControllerTest` / `TotpControllerTest` — [`@WebMvcTest`][WebMvcTest] slices with the service mocked.
+- `QrCodeControllerTest` / `TotpControllerTest` / `NotificationControllerTest` — [`@WebMvcTest`][WebMvcTest]
+  slices with the service mocked, including the 4xx (not 500) answers to malformed requests.
 - `TotpServiceTest` — verifies a code the same `generate()` call just produced is accepted, a
   wrong code / unknown account are rejected appropriately, and the QR image render path produces a
   valid PNG (magic number check) or throws for an unknown account.
@@ -796,7 +817,8 @@ fine and simply returns `503` on every call.
 - `NotificationServiceTest` — exercises the Pushy-based send path.
 
 Note: `/totp/**` now requires HTTP Basic auth (see above) — `TotpControllerTest` covers both the
-401-when-anonymous case and the authenticated happy paths via [`@WithMockUser`][WithMockUser].
+401-when-anonymous case and the authenticated happy paths, using the `user(...)` request
+post-processor from [`SecurityMockMvcRequestPostProcessors`][SecurityMockMvcRequestPostProcessors].
 
 </ul>
 
@@ -828,25 +850,25 @@ Note: `/totp/**` now requires HTTP Basic auth (see above) — `TotpControllerTes
 [BinaryBitmap]: https://github.com/zxing/zxing/blob/zxing-3.5.4/core/src/main/java/com/google/zxing/BinaryBitmap.java
 [BitMatrix]: https://github.com/zxing/zxing/blob/zxing-3.5.4/core/src/main/java/com/google/zxing/common/BitMatrix.java
 [BufferedImageLuminanceSource]: https://github.com/zxing/zxing/blob/zxing-3.5.4/javase/src/main/java/com/google/zxing/client/j2se/BufferedImageLuminanceSource.java
-[Clock]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/time/Clock.java
+[Clock]: https://github.com/openjdk/jdk/blob/jdk-27-ga/src/java.base/share/classes/java/time/Clock.java
 [ConditionalOnProperty]: https://github.com/spring-projects/spring-boot/blob/v4.1.1/core/spring-boot-autoconfigure/src/main/java/org/springframework/boot/autoconfigure/condition/ConditionalOnProperty.java
 [DefaultCodeVerifier]: https://github.com/samdjstevens/java-totp/blob/totp-1.7.1/totp/src/main/java/dev/samstevens/totp/code/DefaultCodeVerifier.java
 [DefaultSecretGenerator]: https://github.com/samdjstevens/java-totp/blob/totp-1.7.1/totp/src/main/java/dev/samstevens/totp/secret/DefaultSecretGenerator.java
-[ExecutionException]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/util/concurrent/ExecutionException.java
+[ExecutionException]: https://github.com/openjdk/jdk/blob/jdk-27-ga/src/java.base/share/classes/java/util/concurrent/ExecutionException.java
 [HashingAlgorithm]: https://github.com/samdjstevens/java-totp/blob/totp-1.7.1/totp/src/main/java/dev/samstevens/totp/code/HashingAlgorithm.java
 [HybridBinarizer]: https://github.com/zxing/zxing/blob/zxing-3.5.4/core/src/main/java/com/google/zxing/common/HybridBinarizer.java
-[ImageIO]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.desktop/share/classes/javax/imageio/ImageIO.java
-[InterruptedException]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/lang/InterruptedException.java
+[ImageIO]: https://github.com/openjdk/jdk/blob/jdk-27-ga/src/java.desktop/share/classes/javax/imageio/ImageIO.java
+[InterruptedException]: https://github.com/openjdk/jdk/blob/jdk-27-ga/src/java.base/share/classes/java/lang/InterruptedException.java
 [JdbcTemplate]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-jdbc/src/main/java/org/springframework/jdbc/core/JdbcTemplate.java
 [MatrixToImageWriter]: https://github.com/zxing/zxing/blob/zxing-3.5.4/javase/src/main/java/com/google/zxing/client/j2se/MatrixToImageWriter.java
 [MethodArgumentNotValidException]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/bind/MethodArgumentNotValidException.java
 [MultiFormatReader]: https://github.com/zxing/zxing/blob/zxing-3.5.4/core/src/main/java/com/google/zxing/MultiFormatReader.java
-[Optional]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/util/Optional.java
+[Optional]: https://github.com/openjdk/jdk/blob/jdk-27-ga/src/java.base/share/classes/java/util/Optional.java
 [QRCodeWriter]: https://github.com/zxing/zxing/blob/zxing-3.5.4/core/src/main/java/com/google/zxing/qrcode/QRCodeWriter.java
 [QrData]: https://github.com/samdjstevens/java-totp/blob/totp-1.7.1/totp/src/main/java/dev/samstevens/totp/qr/QrData.java
 [QrGenerationException]: https://github.com/samdjstevens/java-totp/blob/totp-1.7.1/totp/src/main/java/dev/samstevens/totp/exceptions/QrGenerationException.java
+[SecurityMockMvcRequestPostProcessors]: https://github.com/spring-projects/spring-security/blob/7.1.1/test/src/main/java/org/springframework/security/test/web/servlet/request/SecurityMockMvcRequestPostProcessors.java
 [SimpleApnsPayloadBuilder]: https://github.com/jchambers/pushy/blob/pushy-0.15.6/pushy/src/main/java/com/eatthepath/pushy/apns/util/SimpleApnsPayloadBuilder.java
 [TokenUtil]: https://github.com/jchambers/pushy/blob/pushy-0.15.6/pushy/src/main/java/com/eatthepath/pushy/apns/util/TokenUtil.java
 [WebMvcTest]: https://github.com/spring-projects/spring-boot/blob/v4.1.1/module/spring-boot-webmvc-test/src/main/java/org/springframework/boot/webmvc/test/autoconfigure/WebMvcTest.java
-[WithMockUser]: https://github.com/spring-projects/spring-security/blob/7.1.1/test/src/main/java/org/springframework/security/test/context/support/WithMockUser.java
 [ZxingPngQrGenerator]: https://github.com/samdjstevens/java-totp/blob/totp-1.7.1/totp/src/main/java/dev/samstevens/totp/qr/ZxingPngQrGenerator.java
