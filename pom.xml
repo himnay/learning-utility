@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.org.llm</groupId>
         <artifactId>super-pom</artifactId>
-        <version>1.1.4</version>
+        <version>1.2.0</version>
     </parent>
 
     <groupId>com.learning</groupId>
@@ -15,11 +15,6 @@
     <version>0.0.1-SNAPSHOT</version>
     <name>learning-utility</name>
     <description>QR code scanning (ZXing) and TOTP generation/verification (dev.samstevens.totp) demo APIs</description>
-
-    <properties>
-        <java.version>25</java.version>
-        <maven.compiler.release>${java.version}</maven.compiler.release>
-    </properties>
 
     <dependencies>
         <dependency>
