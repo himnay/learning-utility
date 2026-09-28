@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 
 class NotificationServiceTest {
 
-  private static final String DEVICE_TOKEN = "740f4707bebcf74f9b7c25d48e3358945f6aa01da5ddb387462c7eaf61bb78a";
+  private static final String DEVICE_TOKEN = "740f4707bebcf74f9b7c25d48e3358945f6aa01da5ddb387462c7eaf61bb78a0";
   private static final ApnsProperties PROPERTIES =
       new ApnsProperties(true, "/dev/null", "team", "key", "com.learning.app", false);
 
