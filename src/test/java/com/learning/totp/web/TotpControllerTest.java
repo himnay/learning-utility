@@ -151,4 +151,23 @@ class TotpControllerTest {
         .perform(get("/totp/ghost@example.com/qrcode").with(AUTHENTICATED))
         .andExpect(status().isNotFound());
   }
+
+  @Test
+  @DisplayName("POST /totp/verify with malformed JSON returns 400, not 500")
+  void verifyWithMalformedJsonReturns400() throws Exception {
+    mockMvc
+        .perform(
+            post("/totp/verify")
+                .with(AUTHENTICATED)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"accountName\":"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.status").value(400));
+  }
+
+  @Test
+  @DisplayName("GET /totp/verify returns 405, not 500")
+  void verifyWithWrongMethodReturns405() throws Exception {
+    mockMvc.perform(get("/totp/verify").with(AUTHENTICATED)).andExpect(status().isMethodNotAllowed());
+  }
 }

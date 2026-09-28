@@ -1,12 +1,9 @@
 package com.learning.totp.exception;
 
+/** Wraps a checked {@code CodeGenerationException} from the TOTP library's {@code CodeGenerator}. */
 public class CodeGenerationFailedException extends RuntimeException {
 
-    private String message;
-
-    public CodeGenerationFailedException(String message, Exception exception) {
-        super(exception);
-        this.message = message;
+    public CodeGenerationFailedException(String message, Exception cause) {
+        super(message, cause);
     }
-
 }

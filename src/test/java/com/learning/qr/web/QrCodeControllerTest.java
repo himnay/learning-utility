@@ -91,4 +91,25 @@ class QrCodeControllerTest {
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.message").value("No QR code could be found"));
   }
+
+  @Test
+  @DisplayName("GET /qr/generate without the text parameter returns 400, not 500")
+  void generateWithoutTextReturns400() throws Exception {
+    mockMvc
+        .perform(get("/qr/generate"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.status").value(400));
+  }
+
+  @Test
+  @DisplayName("GET /qr/generate with a non-numeric size returns 400, not 500")
+  void generateWithNonNumericSizeReturns400() throws Exception {
+    mockMvc.perform(get("/qr/generate").param("text", "hello").param("size", "big")).andExpect(status().isBadRequest());
+  }
+
+  @Test
+  @DisplayName("POST /qr/scan without a file part returns 400, not 500")
+  void scanWithoutFilePartReturns400() throws Exception {
+    mockMvc.perform(multipart("/qr/scan")).andExpect(status().isBadRequest());
+  }
 }
