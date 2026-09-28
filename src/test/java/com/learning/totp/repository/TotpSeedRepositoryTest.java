@@ -28,7 +28,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
     properties = "totp.secret-encryption-key=tVaztoUpCpUI5bxM28kEJ0blIoHZ7BHNn9vW4qS3YWw=")
 class TotpSeedRepositoryTest {
 
-  @Container @ServiceConnection static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:16-alpine");
+  @Container @ServiceConnection static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18-alpine");
 
   @Autowired private TotpSeedRepository repository;
   @Autowired private JdbcTemplate jdbc;
