@@ -28,8 +28,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
-@WebMvcTest(controllers = {TotpController.class, GlobalExceptionHandler.class})
 @Import(SecurityConfig.class)
+@WebMvcTest(controllers = {TotpController.class, GlobalExceptionHandler.class})
 class TotpControllerTest {
 
   private static final RequestPostProcessor AUTHENTICATED = user("test-user");
