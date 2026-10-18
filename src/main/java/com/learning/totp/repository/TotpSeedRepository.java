@@ -5,6 +5,7 @@ import com.learning.totp.domain.TotpSeed;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -14,15 +15,11 @@ import org.springframework.stereotype.Repository;
  * plaintext, the ciphertext never leaves this class.
  */
 @Repository
+@RequiredArgsConstructor
 public class TotpSeedRepository {
 
   private final JdbcTemplate jdbc;
   private final TotpSecretCipher cipher;
-
-  public TotpSeedRepository(JdbcTemplate jdbc, TotpSecretCipher cipher) {
-    this.jdbc = jdbc;
-    this.cipher = cipher;
-  }
 
   /** Inserts a new seed, or replaces the existing one for this account (re-enrollment rotates the secret). */
   public void upsert(String accountName, String secret) {

@@ -23,6 +23,7 @@ import dev.samstevens.totp.time.SystemTimeProvider;
 import dev.samstevens.totp.time.TimeProvider;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -32,6 +33,7 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class TotpService {
 
   private static final String ISSUER = "learning-utility";
@@ -45,11 +47,6 @@ public class TotpService {
   private final CodeGenerator codeGenerator = new DefaultCodeGenerator(HashingAlgorithm.SHA1, DIGITS);
   private final CodeVerifier codeVerifier = buildCodeVerifier();
   private final QrGenerator qrGenerator = new ZxingPngQrGenerator();
-
-  public TotpService(TotpSeedRepository seedRepository, TotpVerifyRateLimiter rateLimiter) {
-    this.seedRepository = seedRepository;
-    this.rateLimiter = rateLimiter;
-  }
 
   private CodeVerifier buildCodeVerifier() {
     DefaultCodeVerifier verifier = new DefaultCodeVerifier(codeGenerator, timeProvider);

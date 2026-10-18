@@ -12,21 +12,18 @@ import com.learning.notification.exception.NotificationDeliveryException;
 import com.learning.notification.web.dto.NotificationSendResponse;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /** Sends Apple Push Notifications (APNs) using the Pushy client, token-authenticated via a .p8 signing key. */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class NotificationService {
 
   private final Optional<ApnsClient> apnsClient;
   private final ApnsProperties properties;
-
-  public NotificationService(Optional<ApnsClient> apnsClient, ApnsProperties properties) {
-    this.apnsClient = apnsClient;
-    this.properties = properties;
-  }
 
   /** Sends. */
   public NotificationSendResponse send(String deviceToken, String title, String body, Integer badge) {
